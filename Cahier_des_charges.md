@@ -1,9 +1,12 @@
-                                                                                                _____ ___ _____ ___ ___ ___ ___ 
-                                                                                               |_   _| __|_   _| _ \_ _|_ _/ __|
-                                                                                                 | | | _|  | | |   /| | | |\__ \
-                                                                                                 |_| |___| |_| |_|_\___|___|___/
+```diff
+        _____ ___ _____ ___ ___ ___ ___ 
+       |_   _| __|_   _| _ \_ _|_ _/ __|
+         | | | _|  | | |   /| | | |\__ \
+         |_| |___| |_| |_|_\___|___|___/           TETRIIS - par Cloé GREBERT & Thomas DUTHOIT
+```
 
 # I. INTRODUCTION 
+Le mini-projet se doit de respecter un ensemble de contraintes et d'attentes, listées ci dessous, pour être valide
 - Par équipe de 2 étudiants
 - Le sujet fonctionnel est libre mais doit être approuvé par l'enseignante
 - Le cadre technique impose les contraintes suivantes :
@@ -15,6 +18,7 @@
     - Au moins une technique de protection de ressource partagée (mutex, sémaphores)
   - Application en mode texte ( pas de graphisme fenêtré)
   - Application s'exécutant sur une seule machine, pas de réseau, pas de sockets
+  - 
 # II. LIVRABLE
 - Une application opérationnelle
 - Un manuel d'installation et d'utilisation
