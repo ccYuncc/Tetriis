@@ -1,0 +1,33 @@
+@startuml
+skinparam actorStyle awesome
+actor CLIENT
+
+
+
+CLIENT -> SERVEUR: Demande de connexion
+
+
+
+alt connexion acceptée
+
+note over SERVEUR: traitement de la requête et du PID du CLIENT
+CLIENT <-- SERVEUR: Signal CONNEXION_OK
+
+end
+
+
+
+
+
+
+alt connexion refusée
+
+... 10 secondes ...
+CLIENT x<-- SERVEUR: Pas de signal
+note over CLIENT: Message d'erreur
+
+
+end
+
+hide footbox
+@enduml
