@@ -1,4 +1,3 @@
-- Diagrammes UML
 # A ne pas oublier
 - Qui récupère l'info ? le client ? le serveur ?
 - Mémoire partagée : pratique (resource à protéger)
@@ -23,7 +22,28 @@ utiliser un signal SERVEUR --> CLIENT pour valider / interdire la connexion
 
 # ETAPES
 ## 0. Spécifications / Architecture / Diagrammes UML
+- [x] Spécifications
+- [x] Cahier des charges
+- [ ] Répartition des technologies par fonctionnalité
+- [ ] Design des différentes parties (podium, jeu, salle d'attente, démarrage, ...)
+- [ ] diagrammes UML (séquences, activités, états)
+
 ## 1. Processus de connexion
+- [ ] côté serveur
+- [ ] côté client
+
 ## 2. Logique de jeu principale
+- [ ] interface graphique (client)
+- [ ] jeu Tetriis
+- [ ] podium
+
 ## 3. Ajout des mécaniques secondaires (lobby, bonus/malus, meilleur score)
-## 4. Polish (menus, podium, graphismes avancées, pseudos)
+- [ ] salle d'attente
+- [ ] table des résultats
+- [ ] démarrage 
+- [ ] bonus/malus
+
+## 4. Polish (menus, graphismes avancées, pseudos)
+- [ ] couleurs
+- [ ] pseudos/menus
+
