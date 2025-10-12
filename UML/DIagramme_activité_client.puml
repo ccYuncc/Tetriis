@@ -1,0 +1,41 @@
+@startuml
+start
+:Lancement Tetriis pour le client;
+repeat
+repeat 
+:Sélection du serveur;
+if (Connexion réussie ?) then (oui)
+    break; 
+endif
+    ->non;
+    :Message d'erreur;
+repeat while () 
+
+
+if (Partie en cours sur le serveur) then (oui)
+    #palegreen:Attente de la fin de la partie actuelle; 
+endif
+    -> non;
+
+repeat
+:affichage des informations 
+de la salle d'attente;
+
+if (Début de la partie ordonné par le serveur) then (oui)
+    
+    #palegreen:Execution de la partie; 
+
+    :Affichage du podium;
+
+    if (Continuer à jouer ?) then (oui)
+
+    else (non)
+        stop;
+    
+    endif
+
+    break
+
+else (non)
+endif
+@enduml
