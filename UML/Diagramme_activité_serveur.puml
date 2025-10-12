@@ -1,0 +1,29 @@
+@startuml
+start
+:Lancement Tetriis sur le serveur;
+:Connexion des joueurs;
+
+repeat 
+if (3/4 des joueurs prêts ?) then (oui)
+    break; 
+endif
+    ->non;
+    :En attente de 3/4 des joueurs prêts;
+repeat while () 
+
+#palegreen:Debut de la partie; 
+
+repeat 
+if (Il ne reste qu'un seul joueur en vie ?) then (oui)
+    break; 
+endif
+    ->non;
+    :Continue la partie;
+repeat while () 
+
+#palegreen:Fin de la partie; 
+
+:Affichage du podium;
+
+stop
+@enduml
