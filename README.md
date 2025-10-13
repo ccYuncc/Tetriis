@@ -45,7 +45,7 @@ Le mini-projet se doit de respecter un ensemble de contraintes et d'attentes, li
 # III. CONCEPTION
 Afin de concevoir et de décrire le comportement de Tetriis, plusieurs travaux de préparation ont été réalisés avant de commencer la production du jeu afin d'anticiper les différentes étapes et fonctionnalités du programme.
 ## III.1 Diagrammes UML
-Tout d'abord, les diagrammes UML nous ont permis de planifier la logique de l'application, que ce soit pour le client ou pour le serveur, ainsi que l'interraction entre ces entités.
+Tout d'abord, les diagrammes UML nous ont permis de planifier la logique de l'application, que ce soit pour le client ou pour le serveur, ainsi que l'interaction entre ces entités.
 ### 1. Diagramme d'activité du client
 ![Diagramme activité client](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/activiteclient.puml)
 ### 2. Diagramme d'activité du serveur
@@ -67,7 +67,7 @@ Si un client tente de rejoindre un serveur sur lequel une partie déjà lancée,
   ![Salle d'attente client](https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/Design/Design_Partie_Attente_JOUEUR.png)
 
 ### 3. Déroulement d'une partie
-La vue principale du jeu est la vue affichée lorsqu'une partie se déroule, une fois de plus, un affichage serveur est prévu enn plus de l'affichage sur le client.
+La vue principale du jeu est la vue affichée lorsqu'une partie se déroule, une fois de plus, un affichage serveur est prévu en plus de l'affichage sur le client.
 - Déroulé de la partie côté client:
   ![Salle d'attente client](https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/Design/Design_Partie_JOUEUR.png)
 - Déroulé de la partie côté Serveur:
