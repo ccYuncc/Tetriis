@@ -1,0 +1,15 @@
+@startuml
+
+[*] --> Etape1 : Ouverture serveur
+Etape1 : connexion à la partie
+Etape1 : Joueur prêt (attent début partie)
+
+Etape1 --> Etape2 : Début partie
+Etape2 : Partie en cours
+
+Etape2 --> Etape3 : Fin de la partie
+Etape3 --> Etape1 : restart
+Etape3 --> [*]
+Etape3 : Affichage Podium
+
+@enduml
