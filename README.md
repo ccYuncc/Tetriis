@@ -14,7 +14,9 @@
   - [**III.1 Diagrammes UML**](#iii1-diagrammes-uml)
     - [Diagramme d'activité du client](#1-diagramme-dactivité-du-client)
     - [Diagramme d'activité du serveur](#2-diagramme-dactivité-du-serveur)
-    - [Diagramme de séquence pour la connexion d'un client au serveur](#3-diagramme-de-séquence-pour-la-connexion-dun-client-au-serveur)
+    - [Diagramme d'état du client](#3-diagramme-détat-du-client)
+    - [Diagramme d'état du serveur](#4-diagramme-détat-du-serveur)
+    - [Diagramme de séquence pour la connexion d'un client au serveur](#5-diagramme-de-séquence-pour-la-connexion-dun-client-au-serveur)
   - [**III.2 Mockups des vues de l'application**](#iii2-mockups-des-vues-de-lapplication)
     - [1. Salle d'attente](#1-salle-dattente)
     - [2. Attente d'une fin de partie](#2-attente-dune-fin-de-partie)
@@ -50,7 +52,11 @@ Tout d'abord, les diagrammes UML nous ont permis de planifier la logique de l'ap
 ![Diagramme activité client](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/activiteclient.puml)
 ### 2. Diagramme d'activité du serveur
 ![Diagramme activité serveur](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/activiteserveur.puml)
-### 3. Diagramme de séquence pour la connexion d'un client au serveur
+### 3. Diagramme d'état du client
+![Diagramme séquence connexion](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/diagrammeetatclient.puml)
+### 4. Diagramme d'état du serveur
+![Diagramme séquence connexion](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/diagrammeetatserveur.puml)
+### 5. Diagramme de séquence pour la connexion d'un client au serveur
 ![Diagramme séquence connexion](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/connexion.puml)
 
 ## III.2 Mockups des vues de l'application
