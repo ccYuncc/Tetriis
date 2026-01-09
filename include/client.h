@@ -5,20 +5,17 @@
  *       |_| |___| |_| |_|_\___|___|___/
  *
  * Project : Tetriis
- * File name : server.c
+ * File name : client.h
  * Description :  
- *          Main file for the server.
- *          Allows clients to connect and handle the game logic
+ *          Include file for the client with its typedef, constants etc...
  * Authors : DUTHOIT Thomas / GREBERT Cloé
  */
 
-#include "server.h" 
-
-int main(){
-
-
-    return 0;
-}
+#ifndef CLIENT_H
+#define CLIENT_H
 
 
+#include "shared.h"
 
+
+#endif  // CLIENT_H

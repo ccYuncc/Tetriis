@@ -12,7 +12,7 @@
  * Authors : DUTHOIT Thomas / GREBERT Cloé
  */
 
-#include "shared.h" 
+#include "client.h" 
 
 int main(){
 
