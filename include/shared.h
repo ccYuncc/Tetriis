@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <ncurses.h>
 
 
 #define CONST_SEM_NOM_INFO_SERVEUR "/TETRIIS_SEM_INFO_SERVEUR"
@@ -44,20 +45,36 @@
 #define CONST_PROJECT_ID 1
 
 #define CONST_LONGUEUR_PSEUDO 20
+#define CONST_LONGUEUR_REPONSE_SERVEUR 20
 
 #define TRUE 1
 #define FALSE 0
 
 #define SIG_LOGIN SIGUSR1
 
-#define CHECK(sts,msg) if ((sts) == -1 )  { perror(msg);exit(-1);}
+
+#define CONST_LOGIN_OK    "YES"
+#define CONST_LOGIN_ECHEC "NO"
+
+#define CONST_NB_COLONNES  80
+#define CONST_NB_LIGNES    24
+
+
+#define MSG_TYPE_LOGIN 1
+#define MSG_TYPE_READY 2
+
+
+
+
+#define CHECK(sts,msg)      if ((sts) == -1 )  { perror(msg);exit(-1);}
+#define MSG_SIZEOF(type)    sizeof(type) - sizeof(long)   // pour les sizeof des messages
 
 typedef int bool_t;
 
 typedef enum {
     ATTENTE=1,
     PARTIE=2,
-    POSIUM=3,
+    PODIUM=3,
 } etat_serveur_t;
 
 typedef struct {
@@ -68,8 +85,6 @@ typedef struct {
 typedef struct {
     pid_t pid_client; 
     char pseudo[CONST_LONGUEUR_PSEUDO];
-    int client_vers_serveur[2];
-    int serveur_vers_client[2]; 
 } login_t; 
 
 typedef struct {
@@ -78,9 +93,32 @@ typedef struct {
     int troisieme;
 } score_t;
 
+typedef struct
+{
+    long type;  // TYPE = 1
+    login_t msg;
+} msg_login_t;
 
-void creation_fichiers_necessaires();
 
+typedef char reponse_serveur_t[CONST_LONGUEUR_REPONSE_SERVEUR];
+
+typedef struct
+{
+    long type;  // TYPE = PID CIBLE
+    reponse_serveur_t msg;
+} msg_reponse_serveur_t;
+
+typedef struct
+{
+    long type; // TYPE = PID CIBLE
+    bool_t ready; 
+    pid_t pid_joueur; 
+} ready_player_t;
+
+
+void creation_fichiers_necessaires(bool_t reset);
+void affichage_logo(int y, int x);
+void init_ncurses();  
 
 
 #endif  // SHARED_H
