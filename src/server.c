@@ -26,6 +26,8 @@ int SHM_SCORE;
 pthread_mutex_t MUT_UPDATE_SERVER = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_LISTE_JOUEURS = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_ETAT_JOUEURS = PTHREAD_MUTEX_INITIALIZER; 
+pthread_mutex_t MUT_JOUEURS_VIVANTS = PTHREAD_MUTEX_INITIALIZER; 
+pthread_mutex_t MUT_CLOSE_ECOUTE = PTHREAD_MUTEX_INITIALIZER; 
 
 // CONDITION 
 pthread_cond_t COND_TRY_CONNEXION = PTHREAD_COND_INITIALIZER;
@@ -36,10 +38,15 @@ int BAL_ID;
 // JOUEURS
 joueurs_t joueurs_enregistre; 
 bool_t etat_joueurs[CONST_NOMBRE_JOUEURS]; 
+bool_t joueurs_vivants[CONST_NOMBRE_JOUEURS]; 
+
+// VARIABLES GLOBALE
+bool close_ecoute = FALSE; 
 
 // PROTOTYPE
 void * thread_connexion(void * arg);
 void * thread_ecoute(void * arg); 
+void * thread_ecoute_parti(void * arg); 
 void affichage_serveur();  
 void affichage_liste_joueurs();
 void changement_etat_serveur(etat_serveur_t etat_serveur); 
@@ -48,6 +55,9 @@ void affichage_liste_joueur_etat();
 bool ready_player_start(); 
 void affichage_attente(); 
 int nb_ready_player(); 
+void deroute(); 
+void close_shm_sem();
+bool check_end_game(); 
 
 
 int main(){
@@ -56,6 +66,8 @@ int main(){
     // --------------------------------------- INIT --------------------------------------- //
     pthread_t TH_CONNEXION; 
     pthread_t TH_ECOUTE;  
+    pthread_t TH_ECOUTE_PARTI[CONST_NOMBRE_JOUEURS]; 
+    struct sigaction newact; 
 
     // Initialisation des sémaphores
     SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR,  O_CREAT, 0666, 0); 
@@ -68,19 +80,19 @@ int main(){
     char chemin[500];  // pour concaténer les éléments du chemin
     // SHM INFO SERVEUR
     snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_INFO_SERVEUR);
-    key_t tok_INFO_SERVEUR = ftok(chemin, CONST_PROJECT_ID); 
+    key_t tok_INFO_SERVEUR = ftok(chemin, CONST_PROJECT_ID_INFO); 
     SHM_INFO_SERVEUR = shmget(tok_INFO_SERVEUR, sizeof(info_serveur_t), 0666 | IPC_CREAT); 
     CHECK(SHM_INFO_SERVEUR, "DEBUG ] SERVEUR ] Erreur shmget SHM_INFO_SERVEUR"); 
 
     // SHM SCORE
     snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_SCORE);
-    key_t tok_SCORE = ftok(chemin, CONST_PROJECT_ID); 
+    key_t tok_SCORE = ftok(chemin, CONST_PROJECT_ID_SCORE); 
     SHM_SCORE = shmget(tok_SCORE, sizeof(score_t), 0666 | IPC_CREAT); 
     CHECK(SHM_SCORE, "DEBUG ] SERVEUR ] Erreur shmget SHM_SCORE");
     
     // BOITE AUX LETTRES
     snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_BAL);
-    key_t tok_BAL = ftok(chemin, CONST_PROJECT_ID);
+    key_t tok_BAL = ftok(chemin, CONST_PROJECT_ID_BAL);
     CHECK(tok_BAL, "DEBUG ] CLIENT ] Erreur ftok BAL");
     BAL_ID = msgget(tok_BAL, 0666 | IPC_CREAT);
     CHECK(BAL_ID, "DEBUG ] CLIENT ] Erreur msgget BAL");
@@ -90,12 +102,31 @@ int main(){
     joueurs_enregistre.nb_joueurs_en_partie = 0; 
 
     // Initialisation bool d'état des joueurs
+    pthread_mutex_lock(&MUT_ETAT_JOUEURS); 
     for(int i = 0; i < CONST_NOMBRE_JOUEURS; i++){
         etat_joueurs[i] = FALSE; 
     }
+    pthread_mutex_unlock(&MUT_ETAT_JOUEURS); 
+
+    //  Initialisation bool d'état des joueurs en partie (VIVANT = TRUE | MORT = FALSE)
+    pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
+    for(int i = 0; i < CONST_NOMBRE_JOUEURS; i++){
+        joueurs_vivants[i] = TRUE; 
+    }
+    pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS);
 
     affichage_serveur();  // AFFICHAGE
     // ------------------------------------------------------------------------------------ //
+    #pragma endregion
+
+    #pragma region DEROUTE 
+    // --------------------------------------- DEROUTE --------------------------------------- //
+    newact.sa_flags = 0;
+    sigemptyset(&newact.sa_mask);
+    newact.sa_handler = deroute;
+    CHECK(sigaction(SIGINT, &newact, NULL), "Problème sigaction");
+
+    // --------------------------------------------------------------------------------------- //
     #pragma endregion
     
 
@@ -115,18 +146,27 @@ int main(){
     #pragma endregion
 
 
-    #pragma region CREATE_THREAD
-    // --------------------------------------- CREATE_THREAD --------------------------------------- //
+    #pragma region CREATE_THREAD_CONNEXION
+    // --------------------------------------- CREATE_THREAD_CONNEXION --------------------------------------- //
     // Création des threads
     // THREAD DE CONNEXION
     pthread_create(&TH_CONNEXION, NULL, thread_connexion, NULL); 
-    pthread_create(&TH_ECOUTE, NULL, thread_ecoute, NULL); 
     #pragma endregion
 
     
     #pragma region JEU
+    while(1){
     // --------------------------------------- JEU --------------------------------------- //
+        #pragma region REINIT 
         init_ncurses(); 
+
+        pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
+        close_ecoute = FALSE;
+        pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);
+
+        #pragma endregion
+    
+    
         #pragma region ATTENTE
             // --------------------------------------- ATTENTE --------------------------------------- //
 
@@ -134,6 +174,12 @@ int main(){
             pthread_mutex_lock(&MUT_UPDATE_SERVER); 
             changement_etat_serveur(ATTENTE);  
             pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
+
+            pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
+            close_ecoute = FALSE;
+            pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);
+
+            pthread_create(&TH_ECOUTE, NULL, thread_ecoute, NULL); 
 
             // REINITIALISATION DU NOMBRE DE JOUEURS EN PARTIE
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
@@ -148,12 +194,72 @@ int main(){
                 affichage_attente(); 
                 usleep(100000); // 100 ms
             }
+
+            //  FIN DE L'ATTENTE : GESTION D'AVANT PARTIE 
+            //  Fermeture du thread
+            pthread_mutex_lock(&MUT_CLOSE_ECOUTE); 
+            close_ecoute = TRUE; 
+            pthread_mutex_unlock(&MUT_CLOSE_ECOUTE); 
+            pthread_join(TH_ECOUTE, NULL);   
+
+            // SIGNAL DE LANCEMENT DE LA PARTIE 
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
+                kill(joueurs_enregistre.liste_joueurs[i].pid_client, SIG_START); 
+            }
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+
+            // SAUVEGARDE DU NOMBRE DE JOUEURS
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            joueurs_enregistre.nb_joueurs_en_partie = joueurs_enregistre.nb_joueurs; 
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+
             // -------------------------------------------------------------------------------------------------- //
         #pragma endregion
 
+        // AFFICHAGE DU LANCEMENT DE LA PARTIE 
+        printw("AFFICHAGE COMPTEUR"); 
+
+        for (int s=3; s>0; s--) {
+            for (int p=1; p<4; p++) {
+                affichage_compteur(s, p); 
+                usleep(333333); // 1/3 s  
+            }
+            usleep(1000000);
+        }
+        affichage_lancement(); 
+        usleep(1000000); // 1 s
 
         #pragma region PARTIE 
             // --------------------------------------- PARTIE --------------------------------------- //
+            // MODIFICATION ETAT DU SERVEUR
+            pthread_mutex_lock(&MUT_UPDATE_SERVER); 
+            changement_etat_serveur(PARTIE);  
+            pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
+
+            // OUVERTURE DU THREAD D'ECOUTE PAR JOUEUR
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
+            {
+                pthread_create(&TH_ECOUTE_PARTI[i], NULL, thread_ecoute_parti, (void*) i);
+            }
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+
+
+            while(check_end_game()){   // ATTENTE DE FIN DE PARTIE
+
+            }
+
+
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
+            {
+                pthread_join(TH_ECOUTE_PARTI[i], NULL);
+            }
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+
+            while(1); 
+
 
             // -------------------------------------------------------------------------------------------------- //
         #pragma endregion
@@ -161,9 +267,15 @@ int main(){
         
         #pragma region PODIUM 
             // --------------------------------------- PODIUM --------------------------------------- //
+            // MODIFICATION ETAT DU SERVEUR
+            pthread_mutex_lock(&MUT_UPDATE_SERVER); 
+            changement_etat_serveur(PARTIE);  
+            pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
+
 
             // -------------------------------------------------------------------------------------------------- //
         #pragma endregion
+    }
 
     // -------------------------------------------------------------------------------------------------- //
     #pragma endregion
@@ -172,16 +284,9 @@ int main(){
     #pragma region CLOSE 
     // --------------------------------------- CLOSE --------------------------------------- //
     pthread_join(TH_CONNEXION, NULL);
-    pthread_join(TH_ECOUTE, NULL);   
 
     printf("SERVEUR ] FIN DE JEU - FERMETURE DU PROGRAMME");
-    // Fermeture des SHM
-    shmctl(SHM_INFO_SERVEUR, IPC_RMID, NULL);  // suppr
-    shmctl(SHM_SCORE, IPC_RMID, NULL);  // suppr
-
-    // Fermeture des sémaphores 
-    sem_close(SEM_INFO_SERVEUR); 
-    sem_unlink(CONST_SEM_NOM_INFO_SERVEUR); 
+    close_shm_sem(); 
 
 
     sem_close(SEM_SCORE); 
@@ -236,13 +341,16 @@ int main(){
 
     void * thread_ecoute(void * arg){
         //printf("SERVEUR ] Début du thread d'écoute \n"); 
-        ready_player_t ready_player; 
+        msg_ready_player_t ready_player; 
         int index; 
+        bool close = FALSE; 
         
-        while(1){
-            msgrcv(BAL_ID, &ready_player, MSG_SIZEOF(ready_player_t), MSG_TYPE_READY, 0); 
+        while(!close){
+            msgrcv(BAL_ID, &ready_player, MSG_SIZEOF(msg_ready_player_t), MSG_TYPE_READY, 0); 
             pid_t pid_joueur = ready_player.pid_joueur; 
             bool_t ready = ready_player.ready; 
+            move(0, 0); 
+            printw("pid : %d | ready : %d", pid_joueur, ready); 
 
             index = find_index_player(pid_joueur);
 
@@ -252,11 +360,24 @@ int main(){
             }
             pthread_mutex_unlock(&MUT_ETAT_JOUEURS); 
 
+            // Vérification avant de continuer l'écoute
+            pthread_mutex_lock(&MUT_CLOSE_ECOUTE); 
+            close = close_ecoute;
+            pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);  
         }    
         
+
+        pthread_mutex_lock(&MUT_CLOSE_ECOUTE); 
+        close_ecoute = FALSE; 
+        pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);
         //printf("EN ATTENDE DES JOUEURS"); 
         //affichage_liste_joueur_etat();
         //affichage_attente(); 
+
+        pthread_exit(0); 
+    }
+
+    void * thread_ecoute_parti(void * arg){
 
         pthread_exit(0); 
     }
@@ -278,21 +399,18 @@ int main(){
     }
 
     bool ready_player_start(){
-
         pthread_mutex_lock(&MUT_LISTE_JOUEURS);
-
         int readyJoueur = 0; 
         int nbTotalJoueur = joueurs_enregistre.nb_joueurs; 
 
-        if (nbTotalJoueur < 3) {
+        if (nbTotalJoueur < 3) { // Cas particulier : aucun joueur dans la liste ou pas assez de joueurs dans la liste
             pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
-            return false; // Cas particulier : aucun joueur dans la liste
+            return false; 
         }
         pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
         readyJoueur = nb_ready_player(); 
-
-        return (((float)readyJoueur/nbTotalJoueur) > 0.75); 
+        return (((int)readyJoueur) >= (int)((float)nbTotalJoueur*0.75));
     } 
 
     int nb_ready_player(){
@@ -322,6 +440,20 @@ int main(){
 
         sem_post(SEM_INFO_SERVEUR); 
     }
+
+    bool check_end_game(){
+        int compteur = 0; 
+        pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+
+        for(int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++){
+            pthread_mutex_lock(&MUT_JOUEURS_VIVANTS);
+            if(joueurs_vivants[i] == TRUE) compteur++; 
+            pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS);
+        }
+
+        pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+        return compteur > 1; 
+    }
 // ------------------------------------------------------------------------------------ //
 #pragma endregion
 
@@ -329,6 +461,7 @@ int main(){
 // --------------------------------------- FONCTION NCURSES --------------------------------------- //
 void affichage_attente(){
     int nbJoueurs = 0; 
+    clear(); 
     affichage_logo(2, 23); 
     mvprintw(7, 23, "Waiting room..."); 
     mvprintw(8, 23, "Welcome to the game : Tetriis !!"); 
@@ -340,12 +473,17 @@ void affichage_attente(){
 
     
     mvprintw(12, 23, "Players : %d", nbJoueurs); 
-    mvprintw(13, 23, "Players ready : %d / %d" , nb_ready_player(), nbJoueurs); 
-
+    if (nbJoueurs <= 3){
+        mvprintw(13, 23, "Players ready to start : %d / %d" , nb_ready_player(), 3); 
+    }else{
+        mvprintw(13, 23, "Players ready to start : %d / %d" , nb_ready_player(), (int)((float)nbJoueurs*0.75)); 
+    }
+    
     mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
     refresh(); 
 }
+
 
 // ------------------------------------------------------------------------------------ //
 #pragma endregion
@@ -415,3 +553,40 @@ void affichage_serveur() {
 }
 // ------------------------------------------------------------------------------------ //
 #pragma endregion
+
+#pragma region FONCTION DEROUTE
+// --------------------------------------- FONCTION DEROUTE --------------------------------------- //
+
+void deroute(int signal){
+    switch(signal){
+        case SIGINT : 
+            printf("Fermeture des joueurs et du serveur \n"); 
+            
+            for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
+                kill(joueurs_enregistre.liste_joueurs[i].pid_client, SIGINT); 
+            }
+            close_shm_sem(); 
+            endwin();
+            exit(EXIT_SUCCESS);  
+            break; 
+        default :  
+            printf("Commande inconnue"); 
+            break; 
+    }
+}
+
+void close_shm_sem(){
+    // Fermeture des SHM
+    shmctl(SHM_INFO_SERVEUR, IPC_RMID, NULL);  // suppr
+    shmctl(SHM_SCORE, IPC_RMID, NULL);  // suppr
+
+    // Fermeture des sémaphores 
+    sem_close(SEM_INFO_SERVEUR); 
+    sem_close(SEM_SCORE); 
+
+    sem_unlink(CONST_SEM_NOM_INFO_SERVEUR); 
+    sem_unlink(CONST_SEM_NOM_SCORE); 
+}
+
+// ------------------------------------------------------------------------------------ //
+#pragma endregion 

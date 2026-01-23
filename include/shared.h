@@ -42,7 +42,9 @@
 
 #define CONST_FIC_BAL ".tetriis/bal"
 
-#define CONST_PROJECT_ID 1
+#define CONST_PROJECT_ID_INFO 1
+#define CONST_PROJECT_ID_SCORE 2
+#define CONST_PROJECT_ID_BAL 3
 
 #define CONST_LONGUEUR_PSEUDO 20
 #define CONST_LONGUEUR_REPONSE_SERVEUR 20
@@ -63,7 +65,7 @@
 #define MSG_TYPE_LOGIN 1
 #define MSG_TYPE_READY 2
 
-
+#define SIG_START 10 // SIGUSR1
 
 
 #define CHECK(sts,msg)      if ((sts) == -1 )  { perror(msg);exit(-1);}
@@ -110,15 +112,16 @@ typedef struct
 
 typedef struct
 {
-    long type; // TYPE = PID CIBLE
+    long type; // TYPE = 2
     bool_t ready; 
     pid_t pid_joueur; 
-} ready_player_t;
+} msg_ready_player_t;
 
 
 void creation_fichiers_necessaires(bool_t reset);
 void affichage_logo(int y, int x);
 void init_ncurses();  
-
+void affichage_compteur(int compteur, int points);
+void affichage_lancement();
 
 #endif  // SHARED_H

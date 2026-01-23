@@ -18,4 +18,9 @@
 #include "shared.h"
 
 
+#define CONST_HAUTEUR_GRILLE_RENDER 20
+#define CONST_LARGEUR_GRILLE_RENDER 10
+#define CONST_LARGEUR_SCALE 2
+
+
 #endif  // CLIENT_H

@@ -7,4 +7,4 @@ client: src/client.c include/shared.h build/shared.o
 	gcc -I "include/" src/client.c build/shared.o -o bin/client.exe -lncursesw
 
 server: src/server.c include/shared.h build/shared.o
-	gcc -I "include/" src/server.c build/shared.o -o bin/server.exe -lncursesw
+	gcc -I "include/" src/server.c build/shared.o -o bin/server.exe -lncursesw 

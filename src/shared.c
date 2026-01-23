@@ -70,9 +70,38 @@ void init_ncurses() {
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
+    curs_set(0);  // cacher le curseur
     start_color();
-    init_pair(1, COLOR_WHITE, COLOR_BLACK);  // BLANC sur fond NOIR
-    init_pair(2, COLOR_GREEN, COLOR_BLACK);  // VERT sur fond NOIR
+    init_pair(1, COLOR_WHITE, COLOR_BLACK);  // BLANC sur fond NOIR     -> 1
+    init_pair(2, COLOR_GREEN, COLOR_BLACK);  // VERT sur fond NOIR      -> 2
+    init_pair(3, COLOR_RED, COLOR_BLACK);  // ROUGE sur fond NOIR       -> 3
+    init_pair(4, COLOR_CYAN, COLOR_BLACK);  // CYAN sur fond NOIR       -> 4 
+    init_pair(5, COLOR_MAGENTA, COLOR_BLACK);  // MAGENTA sur fond NOIR -> 5
+    init_pair(6, COLOR_YELLOW, COLOR_BLACK);  // JAUNE sur fond NOIR    -> 6
     attron(COLOR_PAIR(1));
+    refresh();
+}
+
+void affichage_compteur(int compteur, int points) {
+    clear(); 
+    affichage_logo(2, 23); 
+    if(compteur == 1) attron(COLOR_PAIR(4)); 
+    else if(compteur == 2) attron(COLOR_PAIR(5)); 
+    else if(compteur == 3) attron(COLOR_PAIR(6)); 
+    mvprintw(10, 35, "%d", compteur); 
+    for (int i=0; i<points; i++) {
+        printw(".");
+    }
+    attron(COLOR_PAIR(1));
+    refresh();
+}
+
+void affichage_lancement(){
+    clear(); 
+    affichage_logo(2, 23); 
+    attron(COLOR_PAIR(2));
+    mvprintw(10, 35, "Let's go !!"); 
+    attron(COLOR_PAIR(1));
+    
     refresh();
 }
