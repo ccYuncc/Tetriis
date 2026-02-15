@@ -28,6 +28,7 @@ pthread_mutex_t MUT_LISTE_JOUEURS = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_ETAT_JOUEURS = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_JOUEURS_VIVANTS = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_CLOSE_ECOUTE = PTHREAD_MUTEX_INITIALIZER; 
+pthread_mutex_t MUT_CLOSE_ECOUTE_PARTI = PTHREAD_MUTEX_INITIALIZER; 
 
 // CONDITION 
 pthread_cond_t COND_TRY_CONNEXION = PTHREAD_COND_INITIALIZER;
@@ -42,6 +43,7 @@ bool_t joueurs_vivants[CONST_NOMBRE_JOUEURS];
 
 // VARIABLES GLOBALE
 bool close_ecoute = FALSE; 
+bool close_ecoute_parti = FALSE; 
 
 // PROTOTYPE
 void * thread_connexion(void * arg);
@@ -164,6 +166,10 @@ int main(){
         close_ecoute = FALSE;
         pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);
 
+        pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
+        close_ecoute_parti = FALSE; 
+        pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI);
+
         #pragma endregion
     
     
@@ -174,6 +180,10 @@ int main(){
             pthread_mutex_lock(&MUT_UPDATE_SERVER); 
             changement_etat_serveur(ATTENTE);  
             pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
+
+
+            msg_ready_player_t tmp;
+            while (msgrcv(BAL_ID, &tmp, MSG_SIZEOF(msg_ready_player_t),MSG_TYPE_READY, IPC_NOWAIT) != -1);
 
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
             close_ecoute = FALSE;
@@ -217,6 +227,7 @@ int main(){
             // -------------------------------------------------------------------------------------------------- //
         #pragma endregion
 
+        #pragma region COMPTEUR
         // AFFICHAGE DU LANCEMENT DE LA PARTIE 
         printw("AFFICHAGE COMPTEUR"); 
 
@@ -229,6 +240,8 @@ int main(){
         }
         affichage_lancement(); 
         usleep(1000000); // 1 s
+        
+        #pragma endregion
 
         #pragma region PARTIE 
             // --------------------------------------- PARTIE --------------------------------------- //
@@ -345,26 +358,29 @@ int main(){
         int index; 
         bool close = FALSE; 
         
-        while(!close){
-            msgrcv(BAL_ID, &ready_player, MSG_SIZEOF(msg_ready_player_t), MSG_TYPE_READY, 0); 
-            pid_t pid_joueur = ready_player.pid_joueur; 
-            bool_t ready = ready_player.ready; 
-            move(0, 0); 
-            printw("pid : %d | ready : %d", pid_joueur, ready); 
+        while(1){
 
-            index = find_index_player(pid_joueur);
-
-            pthread_mutex_lock(&MUT_ETAT_JOUEURS); 
-            if (index != -1){
-                etat_joueurs[index] = ready; 
-            }
-            pthread_mutex_unlock(&MUT_ETAT_JOUEURS); 
-
-            // Vérification avant de continuer l'écoute
-            pthread_mutex_lock(&MUT_CLOSE_ECOUTE); 
+            pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
             close = close_ecoute;
-            pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);  
-        }    
+            pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);
+
+            if(close) break;
+
+            if(msgrcv(BAL_ID, &ready_player,MSG_SIZEOF(msg_ready_player_t),MSG_TYPE_READY,IPC_NOWAIT) != -1)
+            {
+                pid_t pid_joueur = ready_player.pid_joueur;
+                bool_t ready = ready_player.ready;
+
+                int index = find_index_player(pid_joueur);
+
+                pthread_mutex_lock(&MUT_ETAT_JOUEURS); 
+                if(index != -1)
+                    etat_joueurs[index] = ready;
+                pthread_mutex_unlock(&MUT_ETAT_JOUEURS); 
+            }
+
+            usleep(50000); // 50ms
+        }   
         
 
         pthread_mutex_lock(&MUT_CLOSE_ECOUTE); 
@@ -378,6 +394,20 @@ int main(){
     }
 
     void * thread_ecoute_parti(void * arg){
+        // Données écouté durant la partie 
+        // Mort d'un joueur dans la partie
+        bool close = FALSE;  
+
+        while(1){
+            pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
+            close = close_ecoute_parti; 
+            pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI);
+
+            if(close) break; 
+            
+            usleep(50000); // 50ms
+        }
+
 
         pthread_exit(0); 
     }
@@ -410,20 +440,18 @@ int main(){
         pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
         readyJoueur = nb_ready_player(); 
-        return (((int)readyJoueur) >= (int)((float)nbTotalJoueur*0.75));
+        return readyJoueur >= (nbTotalJoueur * 3) / 4;
     } 
 
     int nb_ready_player(){
         int readyJoueur = 0; 
 
         pthread_mutex_lock(&MUT_LISTE_JOUEURS);
-        
+        pthread_mutex_lock(&MUT_ETAT_JOUEURS); 
         for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
-            pthread_mutex_lock(&MUT_ETAT_JOUEURS); 
             if(etat_joueurs[i] == true) readyJoueur++;  
-            pthread_mutex_unlock(&MUT_ETAT_JOUEURS);
         }
-
+        pthread_mutex_unlock(&MUT_ETAT_JOUEURS);
         pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
         return readyJoueur; 
@@ -473,7 +501,7 @@ void affichage_attente(){
 
     
     mvprintw(12, 23, "Players : %d", nbJoueurs); 
-    if (nbJoueurs <= 3){
+    if (nbJoueurs < 3){
         mvprintw(13, 23, "Players ready to start : %d / %d" , nb_ready_player(), 3); 
     }else{
         mvprintw(13, 23, "Players ready to start : %d / %d" , nb_ready_player(), (int)((float)nbJoueurs*0.75)); 

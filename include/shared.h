@@ -64,6 +64,7 @@
 
 #define MSG_TYPE_LOGIN 1
 #define MSG_TYPE_READY 2
+#define MSG_TYPE_DEATH 3
 
 #define SIG_START 10 // SIGUSR1
 

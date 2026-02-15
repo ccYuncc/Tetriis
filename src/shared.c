@@ -101,6 +101,7 @@ void affichage_lancement(){
     affichage_logo(2, 23); 
     attron(COLOR_PAIR(2));
     mvprintw(10, 35, "Let's go !!"); 
+    mvprintw(12, 35, "Have fun !!"); 
     attron(COLOR_PAIR(1));
     
     refresh();
