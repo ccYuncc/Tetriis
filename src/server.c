@@ -60,6 +60,7 @@ int nb_ready_player();
 void deroute(); 
 void close_shm_sem();
 bool check_end_game(); 
+void send_message_all_player(int msg, pid_t joueur_origine); 
 
 
 int main(){
@@ -68,7 +69,8 @@ int main(){
     // --------------------------------------- INIT --------------------------------------- //
     pthread_t TH_CONNEXION; 
     pthread_t TH_ECOUTE;  
-    pthread_t TH_ECOUTE_PARTI[CONST_NOMBRE_JOUEURS]; 
+    //pthread_t TH_ECOUTE_PARTI[CONST_NOMBRE_JOUEURS]; 
+    pthread_t TH_ECOUTE_PARTI; 
     struct sigaction newact; 
 
     // Initialisation des sémaphores
@@ -251,25 +253,31 @@ int main(){
             pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
 
             // OUVERTURE DU THREAD D'ECOUTE PAR JOUEUR
-            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-            for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
-            {
-                pthread_create(&TH_ECOUTE_PARTI[i], NULL, thread_ecoute_parti, (void*) i);
-            }
-            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+            //pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            //for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
+            //{
+            //pthread_create(&TH_ECOUTE_PARTI[i], NULL, thread_ecoute_parti, (void*) i);
+            //}
+            //pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
 
+            //  OUVERTURE DU THREAD D'ECOUTE DE JEU
+            pthread_create(&TH_ECOUTE_PARTI, NULL, thread_ecoute_parti, NULL);
 
             while(check_end_game()){   // ATTENTE DE FIN DE PARTIE
 
             }
 
+            pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
+            close_ecoute_parti = TRUE; 
+            pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI); 
 
-            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-            for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
-            {
-                pthread_join(TH_ECOUTE_PARTI[i], NULL);
-            }
-            pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+            pthread_join(TH_ECOUTE_PARTI, NULL); 
+            //pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            //for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
+            //{
+            //    pthread_join(TH_ECOUTE_PARTI[i], NULL);
+            //}
+            //pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
             while(1); 
 
@@ -397,6 +405,10 @@ int main(){
         // Données écouté durant la partie 
         // Mort d'un joueur dans la partie
         bool close = FALSE;  
+        msg_game_player_t msg_game_player; 
+        pid_t pid_joueur; 
+        //int index = (int) arg; 
+        //pid_t pid_joueur = joueurs_enregistre.liste_joueurs[index].pid_client; 
 
         while(1){
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
@@ -404,6 +416,29 @@ int main(){
             pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI);
 
             if(close) break; 
+
+            if(msgrcv(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), MSG_TYPE_GAME, IPC_NOWAIT) != -1)
+            {
+                //Récupère le pid du joueur 
+                pid_joueur = msg_game_player.pid_joueur; 
+                int index_joueur = find_index_player(pid_joueur); 
+
+                switch (msg_game_player.type_msg)
+                {
+                case GAME_MSG_DEATH:
+                    pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
+                    joueurs_vivants[index_joueur] = FALSE; 
+                    pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS);
+                    break;
+                
+                case GAME_MSG_LINE:
+                    
+                    break; 
+                
+                default:
+                    break;
+                }
+            }
             
             usleep(50000); // 50ms
         }
@@ -413,6 +448,19 @@ int main(){
     }
 // ------------------------------------------------------------------------------------ //
 #pragma endregion 
+
+#pragma region FONCTION COMMUNICATION 
+    void send_message_all_player(int msg, pid_t joueur_origine){
+        //Envoie un message à tous les joueurs si joueur_origine = NULL
+        //Si il ne faut pas l'envoyer à un joueur précisé pid dans joueur_origine
+        //msg précise le type de msg à envoyer (FIN, MALUS)
+        pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+
+        pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+    }
+
+
+#pragma endregion
 
 #pragma region FONCTION GESTION 
 // --------------------------------------- FONCTION GESTION --------------------------------------- //

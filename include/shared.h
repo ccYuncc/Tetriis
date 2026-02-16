@@ -64,7 +64,12 @@
 
 #define MSG_TYPE_LOGIN 1
 #define MSG_TYPE_READY 2
-#define MSG_TYPE_DEATH 3
+#define MSG_TYPE_GAME 3
+
+
+#define GAME_MSG_DEATH 1
+#define GAME_MSG_LINE 2 
+
 
 #define SIG_START 10 // SIGUSR1
 
@@ -117,6 +122,15 @@ typedef struct
     bool_t ready; 
     pid_t pid_joueur; 
 } msg_ready_player_t;
+
+typedef struct 
+{
+    /* data */
+    long type; // TYPE = 3
+    int type_msg; // SUJET DU MESSAGE : MORT (1) | LIGNE COMPLETE (2) | ....
+    pid_t pid_joueur; 
+} msg_game_player_t;
+
 
 
 void creation_fichiers_necessaires(bool_t reset);
