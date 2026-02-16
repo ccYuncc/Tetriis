@@ -36,6 +36,7 @@ login_t joueur;  // contient les informations sur le client actuel
 // PROTOTYPES
 void maj_info_serveur();
 void deroute(int signal);
+void premier_render();
 void render();
 
 
@@ -297,15 +298,14 @@ int main(){
 
                     clear();
 
-                    mvprintw(0, 0, "EN MODE PARTIE !");
-
-                    refresh();
-
+                    premier_render();  // pour afficher les éléments statiques du GUI
+                    
                     _premiere_exec = FALSE;
                 }
 
 
                 render();
+                refresh();
 
 
             } else {
@@ -362,14 +362,26 @@ void maj_info_serveur() {  // mets à jour la variable globale "serveur"
 // --------------------------------------- AFFICHAGE --------------------------------------- //
 
 
-void render() {
+void premier_render() {
     int x_off = 5; 
     int y_off = 3;
     for (int y=0; y<CONST_HAUTEUR_GRILLE_RENDER; y++) {
         mvprintw(y_off+y, x_off, "|");
         mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE, "|");
     }
-    refresh();
+    for (int x=0; x<CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE; x++) {
+        mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+x, "=");
+    }
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off, "+");
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE, "+");
+
+
+    mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+
+}
+
+void render() {
+
 }
 
 // ----------------------------------------------------------------------------------------- //
