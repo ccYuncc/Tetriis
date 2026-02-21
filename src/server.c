@@ -179,9 +179,7 @@ int main(){
             // --------------------------------------- ATTENTE --------------------------------------- //
 
             // MODIFICATION ETAT DU SERVEUR
-            pthread_mutex_lock(&MUT_UPDATE_SERVER); 
             changement_etat_serveur(ATTENTE);  
-            pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
 
 
             msg_ready_player_t tmp;
@@ -229,9 +227,16 @@ int main(){
             // -------------------------------------------------------------------------------------------------- //
         #pragma endregion
 
+        #pragma region CHANGEMENT ETAT SERVEUR = PARTIE
+
+        // MODIFICATION ETAT DU SERVEUR
+        changement_etat_serveur(PARTIE); 
+
+        #pragma endregion
+
         #pragma region COMPTEUR
         // AFFICHAGE DU LANCEMENT DE LA PARTIE 
-        printw("AFFICHAGE COMPTEUR"); 
+        //printw("AFFICHAGE COMPTEUR"); 
 
         for (int s=3; s>0; s--) {
             for (int p=1; p<4; p++) {
@@ -247,10 +252,6 @@ int main(){
 
         #pragma region PARTIE 
             // --------------------------------------- PARTIE --------------------------------------- //
-            // MODIFICATION ETAT DU SERVEUR
-            pthread_mutex_lock(&MUT_UPDATE_SERVER); 
-            changement_etat_serveur(PARTIE);  
-            pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
 
             // OUVERTURE DU THREAD D'ECOUTE PAR JOUEUR
             //pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
@@ -289,9 +290,7 @@ int main(){
         #pragma region PODIUM 
             // --------------------------------------- PODIUM --------------------------------------- //
             // MODIFICATION ETAT DU SERVEUR
-            pthread_mutex_lock(&MUT_UPDATE_SERVER); 
             changement_etat_serveur(PARTIE);  
-            pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
 
 
             // -------------------------------------------------------------------------------------------------- //
@@ -506,6 +505,8 @@ int main(){
     }
 
     void changement_etat_serveur(etat_serveur_t etat_serveur){
+        pthread_mutex_lock(&MUT_UPDATE_SERVER);  
+        
         sem_wait(SEM_INFO_SERVEUR); 
 
         info_serveur_t * info_serveur = shmat(SHM_INFO_SERVEUR, NULL, 0); 
@@ -515,6 +516,8 @@ int main(){
         
 
         sem_post(SEM_INFO_SERVEUR); 
+        
+        pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
     }
 
     bool check_end_game(){

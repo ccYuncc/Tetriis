@@ -112,7 +112,6 @@ int main(){
     // -------------------------------------------------------------------------------------------------------- //
     #pragma endregion
 
-
     #pragma region CONNEXION
     // --------------------------------------- CONNEXION --------------------------------------- //
 
@@ -309,7 +308,20 @@ int main(){
 
 
             } else {
-                printf("CLIENT] Partie en cours ...\n");
+                //printf("CLIENT] Partie en cours ...\n");
+                
+                affichage_logo(2, 23);
+                
+                mvprintw(8, 13, "Welcome ");
+                attron(COLOR_PAIR(2));
+                printw("%s", joueur.pseudo);
+                attron(COLOR_PAIR(1));
+                printw(" to the game : Tetriis !!");
+                mvprintw(7, 13, "Game in progress ..."); 
+                mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+
+                refresh();
+
 
                 maj_info_serveur();
             }
