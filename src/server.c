@@ -59,7 +59,7 @@ void affichage_attente();
 int nb_ready_player(); 
 void deroute(); 
 void close_shm_sem();
-bool check_end_game(); 
+int check_end_game(); 
 void send_message_all_player(int msg, pid_t joueur_origine); 
 
 
@@ -67,6 +67,8 @@ int main(){
 
     #pragma region INIT
     // --------------------------------------- INIT --------------------------------------- //
+    int nbJoueurs; 
+    
     pthread_t TH_CONNEXION; 
     pthread_t TH_ECOUTE;  
     //pthread_t TH_ECOUTE_PARTI[CONST_NOMBRE_JOUEURS]; 
@@ -253,34 +255,34 @@ int main(){
         #pragma region PARTIE 
             // --------------------------------------- PARTIE --------------------------------------- //
 
-            // OUVERTURE DU THREAD D'ECOUTE PAR JOUEUR
-            //pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-            //for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
-            //{
-            //pthread_create(&TH_ECOUTE_PARTI[i], NULL, thread_ecoute_parti, (void*) i);
-            //}
-            //pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
-
             //  OUVERTURE DU THREAD D'ECOUTE DE JEU
             pthread_create(&TH_ECOUTE_PARTI, NULL, thread_ecoute_parti, NULL);
 
-            while(check_end_game()){   // ATTENTE DE FIN DE PARTIE
+            
+            while(check_end_game() != 1){   // ATTENTE DE FIN DE PARTIE
+                clear(); 
+                affichage_logo(2, 23); 
+                mvprintw(7, 23, "Game in progress..."); 
 
+                pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+                nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
+                pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+
+                mvprintw(12, 23, "Nombre de joueurs en vie : %d/%d", check_end_game(), nbJoueurs); 
+
+                mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+                refresh(); 
+                usleep(1000000); // 1s
             }
 
+            
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
-            close_ecoute_parti = TRUE; 
+            close_ecoute_parti = TRUE;              // PARTIE TERMINEE / FERMETURE THREAD ECOUTE PARTIE
             pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI); 
 
             pthread_join(TH_ECOUTE_PARTI, NULL); 
-            //pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-            //for (int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++)
-            //{
-            //    pthread_join(TH_ECOUTE_PARTI[i], NULL);
-            //}
-            //pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
-            while(1); 
+            //while(1); 
 
 
             // -------------------------------------------------------------------------------------------------- //
@@ -290,7 +292,14 @@ int main(){
         #pragma region PODIUM 
             // --------------------------------------- PODIUM --------------------------------------- //
             // MODIFICATION ETAT DU SERVEUR
-            changement_etat_serveur(PARTIE);  
+            changement_etat_serveur(PODIUM);  
+
+            clear(); 
+            affichage_logo(2, 23); 
+            mvprintw(7, 23, "Affichage podium"); 
+            refresh(); 
+
+            while(1); 
 
 
             // -------------------------------------------------------------------------------------------------- //
@@ -431,7 +440,13 @@ int main(){
                     break;
                 
                 case GAME_MSG_LINE:
+                    // Un joueur a rempli 2 lignes en un coup
+                    // Malus : tous les autres joueurs ont une ligne en plus
+                    // Bonus : le joueur avec le plus haut score n'a pas de ligne en plus 
                     
+                    // Lecture premier joueur dans le score
+
+
                     break; 
                 
                 default:
@@ -520,7 +535,7 @@ int main(){
         pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
     }
 
-    bool check_end_game(){
+    int check_end_game(){
         int compteur = 0; 
         pthread_mutex_lock(&MUT_LISTE_JOUEURS);
 
@@ -531,7 +546,7 @@ int main(){
         }
 
         pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
-        return compteur > 1; 
+        return compteur; 
     }
 // ------------------------------------------------------------------------------------ //
 #pragma endregion
