@@ -1,0 +1,4 @@
+
+build/TEST_shared.o
+bin/TEST_client.exe
+bin/TEST_server.exe

@@ -45,6 +45,12 @@ int main(){
 
     #pragma region INIT
     // --------------------------------------- INIT --------------------------------------- //
+    #ifdef MODE_TEST
+        printf("ATTENTION: Complé en mode TEST !\n");
+
+        // variables utiles au mode test:
+        int data = 0;
+    #endif  // MODE_TEST
 
     // OUVERTURE DES SEMAPHORES
     SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR, 0); 
@@ -292,21 +298,51 @@ int main(){
             #pragma region PARTIE
             // --------------------------------------- PARTIE --------------------------------------- //
             if (_attente_effectuee) {
-                if (_premiere_exec) {
-                    // code éxecuté la première fois en mode PARTIE (style qualificatif P1 en automatisme)
 
-                    clear();
+                #ifndef MODE_TEST  // section en mode normal
+                
+                    if (_premiere_exec) {
+                        // code éxecuté la première fois en mode PARTIE (style qualificatif P1 en automatisme)
 
-                    premier_render();  // pour afficher les éléments statiques du GUI
-                    
-                    _premiere_exec = FALSE;
-                }
+                        clear();
 
+                        premier_render();  // pour afficher les éléments statiques du GUI
+                        
+                        _premiere_exec = FALSE;
+                    }
 
-                render();
-                refresh();
+                    render();
+                    refresh();
 
+                #else  // section en mode test
+                    if (_premiere_exec) {
+                        // code éxecuté la première fois en mode PARTIE (style qualificatif P1 en automatisme)
 
+                        clear();
+                        
+                        _premiere_exec = FALSE;
+                    }
+                    mvprintw(2, 2, "[TEST] data a envoyer au serveur : ");
+                    refresh();
+                    char c = getch();
+                    if (c != '\n') {
+                        if (c >= '0' && c <= '9') {
+                            data = c - '0';
+                            mvprintw(2, 2, "[TEST] data a envoyer au serveur : %d", data);
+                        }
+                    } else {  // envoi
+
+                        msg_game_player_t msg_game_player;
+                        msg_game_player.type = MSG_TYPE_GAME;
+                        msg_game_player.pid_joueur = joueur.pid_client;
+                        msg_game_player.type_msg = data;
+
+                        msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
+
+                        mvprintw(4, 2, "[TEST] dernier message envoye : %d", data);
+                    }
+
+                #endif  // MODE_TEST
             } else {
                 //printf("CLIENT] Partie en cours ...\n");
                 
