@@ -26,8 +26,6 @@ void creation_fichiers_necessaires(bool_t reset) {
         remove(chemin);
         snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_SCORE);
         remove(chemin);
-        snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_LAST_SURVIVORS);
-        remove(chemin);
         snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_BAL);
         remove(chemin);
     }
@@ -41,11 +39,6 @@ void creation_fichiers_necessaires(bool_t reset) {
     }
     _fic = NULL;
     snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_SCORE);
-    if (_fic = fopen(chemin, "a")) {
-        fclose(_fic);
-    }
-    _fic = NULL;
-    snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_LAST_SURVIVORS);
     if (_fic = fopen(chemin, "a")) {
         fclose(_fic);
     }
@@ -115,15 +108,22 @@ void affichage_lancement(){
 }
 
 void affichage_podium(){
+    int x_off = 30; 
+    int y_off = 30;
     clear(); 
     affichage_logo(2, 23);
     
-    mvprintw(10, 30, "We hope you enjoy the game"); 
-    mvprintw(10, 30, "Results");
+    mvprintw(10, 23, "We hope you enjoy the game"); 
+
+    attron(A_BOLD);
+    mvprintw(12, 30, "Results");
+    attroff(A_BOLD);
     
+    for (int y=0; y<18; y++) {
+        mvprintw(y_off+y, x_off, "|");
+    }
 
-
-
+    mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
 
     refresh(); 

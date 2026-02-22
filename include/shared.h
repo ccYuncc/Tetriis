@@ -35,19 +35,16 @@
 
 #define CONST_SEM_NOM_INFO_SERVEUR "/TETRIIS_SEM_INFO_SERVEUR"
 #define CONST_SEM_NOM_SCORE "/TETRIIS_SEM_SCORE"
-#define CONST_SEM_NOM_LAST_SURVIVORS "/TETRIIS_LAST_SURVIVOR"
 
 #define CONST_DIR_SHM ".tetriis"  // répertoire "caché"
 #define CONST_FIC_SHM_INFO_SERVEUR ".tetriis/info_serveur"  // fichier dans un répertoire "caché"
 #define CONST_FIC_SHM_SCORE ".tetriis/score"  // fichier dans un répertoire "caché"
-#define CONST_FIC_SHM_LAST_SURVIVORS ".tetriis/last_survivor"  // fichier dans un répertoire "caché"
 
 #define CONST_FIC_BAL ".tetriis/bal"
 
 #define CONST_PROJECT_ID_INFO 1
 #define CONST_PROJECT_ID_SCORE 2
 #define CONST_PROJECT_ID_BAL 3
-#define CONST_PROJECT_ID_LAST_SURVIVORS 4
 
 #define CONST_LONGUEUR_PSEUDO 20
 #define CONST_LONGUEUR_REPONSE_SERVEUR 20
@@ -115,9 +112,6 @@ typedef struct{
   joueur_t troisieme;  
 } score_t; 
 
-typedef pid_t last_survivors_t[3]; // pos 1 : pid dernier | pos 2 : pid avant dernier | pos 3 : pid avant avant dernier 
-
-
 typedef char reponse_serveur_t[CONST_LONGUEUR_REPONSE_SERVEUR];
 
 typedef struct
@@ -152,5 +146,6 @@ void affichage_logo(int y, int x);
 void init_ncurses();  
 void affichage_compteur(int compteur, int points);
 void affichage_lancement();
+void affichage_podium(); 
 
 #endif  // SHARED_H
