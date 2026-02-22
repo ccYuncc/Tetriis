@@ -17,10 +17,12 @@
 // SEMAPHORE
 sem_t * SEM_INFO_SERVEUR;
 sem_t * SEM_SCORE;
+sem_t * SEM_LAST_SURVIVORS; 
 
 // SHM
 int SHM_INFO_SERVEUR;
 int SHM_SCORE;
+int SHM_LAST_SURVIVORS; 
 
 // BAL
 int BAL_ID;
@@ -55,6 +57,7 @@ int main(){
     // OUVERTURE DES SEMAPHORES
     SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR, 0); 
     SEM_SCORE = sem_open(CONST_SEM_NOM_SCORE, 0); 
+    SEM_LAST_SURVIVORS = sem_open(CONST_SEM_NOM_LAST_SURVIVORS, 0); 
     
     // TEST ERREUR DE CREATION
     if (SEM_INFO_SERVEUR == SEM_FAILED || SEM_SCORE == SEM_FAILED  ) {
@@ -74,11 +77,17 @@ int main(){
     SHM_INFO_SERVEUR = shmget(tok_INFO_SERVEUR, sizeof(info_serveur_t), 0666 | IPC_CREAT); 
     CHECK(SHM_INFO_SERVEUR, "DEBUG ] CLIENT ] Erreur shmget SHM_INFO_SERVEUR"); 
 
-    // SHM SCORECONST_FIC_SHM_SCORE
+    // SHM SCORE
     snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_SCORE);
     key_t tok_SCORE = ftok(chemin, CONST_PROJECT_ID_SCORE); 
     SHM_SCORE = shmget(tok_SCORE, sizeof(score_t), 0666 | IPC_CREAT); 
     CHECK(SHM_SCORE, "DEBUG ] CLIENT ] Erreur shmget SHM_SCORE"); 
+
+    // SHM LAST SURVIVORS
+    snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_LAST_SURVIVORS);
+    key_t tok_LAST_SURVIVORS = ftok(chemin, CONST_PROJECT_ID_LAST_SURVIVORS); 
+    SHM_LAST_SURVIVORS = shmget(tok_LAST_SURVIVORS, sizeof(score_t), 0666 | IPC_CREAT); 
+    CHECK(SHM_LAST_SURVIVORS, "DEBUG ] CLIENT ] Erreur shmget SHM_LAST_SURVIVORS"); 
 
 
     // BOITE AUX LETTRES

@@ -26,6 +26,8 @@ void creation_fichiers_necessaires(bool_t reset) {
         remove(chemin);
         snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_SCORE);
         remove(chemin);
+        snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_LAST_SURVIVORS);
+        remove(chemin);
         snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_BAL);
         remove(chemin);
     }
@@ -39,6 +41,11 @@ void creation_fichiers_necessaires(bool_t reset) {
     }
     _fic = NULL;
     snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_SCORE);
+    if (_fic = fopen(chemin, "a")) {
+        fclose(_fic);
+    }
+    _fic = NULL;
+    snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_LAST_SURVIVORS);
     if (_fic = fopen(chemin, "a")) {
         fclose(_fic);
     }
@@ -105,4 +112,19 @@ void affichage_lancement(){
     attron(COLOR_PAIR(1));
     
     refresh();
+}
+
+void affichage_podium(){
+    clear(); 
+    affichage_logo(2, 23);
+    
+    mvprintw(10, 30, "We hope you enjoy the game"); 
+    mvprintw(10, 30, "Results");
+    
+
+
+
+
+
+    refresh(); 
 }

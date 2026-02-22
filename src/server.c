@@ -16,11 +16,13 @@
 
 // SEMAPHORE
 sem_t * SEM_INFO_SERVEUR;
-sem_t * SEM_SCORE; 
+sem_t * SEM_SCORE;
+sem_t * SEM_LAST_SURVIVORS;  
 
 // SHM
 int SHM_INFO_SERVEUR;
 int SHM_SCORE;
+int SHM_LAST_SURVIVORS; 
 
 // MUTEX
 pthread_mutex_t MUT_UPDATE_SERVER = PTHREAD_MUTEX_INITIALIZER; 
@@ -29,6 +31,8 @@ pthread_mutex_t MUT_ETAT_JOUEURS = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_JOUEURS_VIVANTS = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_CLOSE_ECOUTE = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_CLOSE_ECOUTE_PARTI = PTHREAD_MUTEX_INITIALIZER; 
+pthread_mutex_t MUT_SCORE = PTHREAD_MUTEX_INITIALIZER; 
+pthread_mutex_t MUT_LAST_SURVIVORS = PTHREAD_MUTEX_INITIALIZER; 
 
 // CONDITION 
 pthread_cond_t COND_TRY_CONNEXION = PTHREAD_COND_INITIALIZER;
@@ -76,8 +80,9 @@ int main(){
     struct sigaction newact; 
 
     // Initialisation des sémaphores
-    SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR,  O_CREAT, 0666, 0); 
+    SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR,  O_CREAT, 0666, 0);
     SEM_SCORE = sem_open(CONST_SEM_NOM_SCORE, O_CREAT, 0666, 1); 
+    SEM_LAST_SURVIVORS = sem_open(CONST_FIC_SHM_LAST_SURVIVORS, O_CREAT, 0666, 0); 
 
     // CREATION DES FICHIERS POUR LES SHM SI NECESSAIRE
     creation_fichiers_necessaires(TRUE);
@@ -95,7 +100,13 @@ int main(){
     key_t tok_SCORE = ftok(chemin, CONST_PROJECT_ID_SCORE); 
     SHM_SCORE = shmget(tok_SCORE, sizeof(score_t), 0666 | IPC_CREAT); 
     CHECK(SHM_SCORE, "DEBUG ] SERVEUR ] Erreur shmget SHM_SCORE");
-    
+
+    // SHM LAST SURVIVORS
+    snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_SHM_LAST_SURVIVORS);
+    key_t tok_LAST_SURVIVORS = ftok(chemin, CONST_PROJECT_ID_LAST_SURVIVORS); 
+    SHM_LAST_SURVIVORS = shmget(tok_LAST_SURVIVORS, sizeof(last_survivors_t), 0666 | IPC_CREAT); 
+    CHECK(SHM_LAST_SURVIVORS, "DEBUG ] SERVEUR ] Erreur shmget SHM_LAST_SURVIVORS");
+
     // BOITE AUX LETTRES
     snprintf(chemin, 500, "%s/%s", getenv("HOME"), CONST_FIC_BAL);
     key_t tok_BAL = ftok(chemin, CONST_PROJECT_ID_BAL);
@@ -260,6 +271,7 @@ int main(){
 
             
             while(check_end_game() != 1){   // ATTENTE DE FIN DE PARTIE
+                //  Affichage
                 clear(); 
                 affichage_logo(2, 23); 
                 mvprintw(7, 23, "Game in progress..."); 
@@ -272,6 +284,7 @@ int main(){
 
                 mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
                 refresh(); 
+ 
                 usleep(1000000); // 1s
             }
 
@@ -293,6 +306,7 @@ int main(){
             // --------------------------------------- PODIUM --------------------------------------- //
             // MODIFICATION ETAT DU SERVEUR
             changement_etat_serveur(PODIUM);  
+
 
             clear(); 
             affichage_logo(2, 23); 
@@ -412,11 +426,13 @@ int main(){
     void * thread_ecoute_parti(void * arg){
         // Données écouté durant la partie 
         // Mort d'un joueur dans la partie
+        // MALUS/BONUS
         bool close = FALSE;  
         msg_game_player_t msg_game_player; 
         pid_t pid_joueur; 
-        //int index = (int) arg; 
-        //pid_t pid_joueur = joueurs_enregistre.liste_joueurs[index].pid_client; 
+
+        pid_t pid_joueur_premier; 
+
 
         while(1){
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
@@ -433,19 +449,45 @@ int main(){
 
                 switch (msg_game_player.type_msg)
                 {
-                case GAME_MSG_DEATH:
+                case GAME_MSG_DEATH:  // MORT D'UN JOUEUR
                     pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
                     joueurs_vivants[index_joueur] = FALSE; 
-                    pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS);
+                    pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS); 
+
+
                     break;
                 
-                case GAME_MSG_LINE:
+                case GAME_MSG_LINE:  // MALUS/BONUS SUITE A 2 LIGNES COMPLETES 
                     // Un joueur a rempli 2 lignes en un coup
                     // Malus : tous les autres joueurs ont une ligne en plus
                     // Bonus : le joueur avec le plus haut score n'a pas de ligne en plus 
                     
                     // Lecture premier joueur dans le score
+                    pthread_mutex_lock(&MUT_SCORE);  
+        
+                    sem_wait(SEM_SCORE); 
+                        
+                        score_t * info_score = shmat(SHM_SCORE, NULL, 0); 
+                        pid_joueur_premier = info_score->premier.login_joueur.pid_client; 
+                        shmdt(info_score); 
+                        
+                    sem_post(SEM_SCORE); 
+                    
+                    pthread_mutex_unlock(&MUT_SCORE); 
+                    
+                    pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
 
+                    msg_game_server_t msg_server;
+                    msg_server.type = MSG_TYPE_GAME;
+                    msg_server.type_msg = GAME_MSG_MALUS;
+
+                    for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
+                        if(joueurs_enregistre.liste_joueurs[i].pid_client != pid_joueur_premier && joueurs_enregistre.liste_joueurs[i].pid_client != pid_joueur){
+                            msgsnd(BAL_ID, &msg_server, MSG_SIZEOF(msg_game_server_t), 0); 
+                        }
+                    }
+
+                    pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
 
                     break; 
                 
