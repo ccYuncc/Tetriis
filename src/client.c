@@ -31,13 +31,35 @@ pthread_mutex_t MUT_INFO_SERVEUR = PTHREAD_MUTEX_INITIALIZER;
 // AUTRES
 info_serveur_t serveur; // informations du serveur tetriis
 login_t joueur;  // contient les informations sur le client actuel
+int tetrominos[7][16] = {  // differens tetrominos (pièces de tetris) possibles
+    {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},  // I
+    {0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0},  // O
+    {0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0},  // S
+    {0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},  // Z
+    {0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0},  // T
+    {0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0},  // L
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0}   // J
+};
+
+int couleurs_tetrominos[7] = {  // correspond à l'id des paires de couleurs de ncurses dans le init
+    4, // I : cyan
+    6, // O : jaune
+    2, // S : vert
+    3, // Z : rouge
+    5, // T : violet
+    3, // L : orange (existe pas donc rouge)
+    7, // J : bleu
+};
+int temp_idx = 0;  // TODO: supprimer après les tests
 
 
 // PROTOTYPES
 void maj_info_serveur();
 void deroute(int signal);
 void premier_render();
+void tetromino_render(int idx_tetromino, int x, int y, int rot);
 void render();
+
 
 
 
@@ -311,7 +333,15 @@ int main(){
                         _premiere_exec = FALSE;
                     }
 
-                    render();
+                    //render();
+
+                    clear();
+                    temp_idx ++;
+                    temp_idx %= 7;
+                    tetromino_render(temp_idx, 10, 10, 0);
+                    getch();
+                    
+
                     refresh();
 
                 #else  // section en mode test
@@ -416,21 +446,41 @@ void premier_render() {
     int y_off = CONST_Y_OFF_GRILLE;
     for (int y=0; y<CONST_HAUTEUR_GRILLE_RENDER; y++) {
         mvprintw(y_off+y, x_off-1, "|");
-        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE+1, "|");
+        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE_RENDER+1, "|");
     }
-    for (int x=0; x<CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE+1; x++) {
+    for (int x=0; x<CONST_LARGEUR_GRILLE_RENDER+1; x++) {
         mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+x, "=");
     }
     mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off-1, "+");
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE+1, "+");
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+CONST_LARGEUR_GRILLE_RENDER+1, "+");
 
     mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
 }
 
+
+void tetromino_render(int idx_tetromino, int x, int y, int rot) {
+    int tetr[16];
+    memcpy(tetr, tetrominos[idx_tetromino], 16*sizeof(int));
+
+
+    attron(COLOR_PAIR(couleurs_tetrominos[idx_tetromino]));
+    for (int _x =0; _x < 4; _x++) {
+        for (int _y=0; _y<4; _y++) {
+            if (tetr[_x*4+_y]) {
+                mvprintw(x+_x, y+_y, "#");
+            }
+        }
+    }
+    attron(COLOR_PAIR(1));
+}
+
+
 void render() {
 
 }
+
+
 
 // ----------------------------------------------------------------------------------------- //
 #pragma endregion

@@ -78,6 +78,7 @@ void init_ncurses() {
     init_pair(4, COLOR_CYAN, COLOR_BLACK);  // CYAN sur fond NOIR       -> 4 
     init_pair(5, COLOR_MAGENTA, COLOR_BLACK);  // MAGENTA sur fond NOIR -> 5
     init_pair(6, COLOR_YELLOW, COLOR_BLACK);  // JAUNE sur fond NOIR    -> 6
+    init_pair(7, COLOR_BLUE, COLOR_BLACK);  // JAUNE sur fond NOIR    -> 6
     attron(COLOR_PAIR(1));
     refresh();
 }
