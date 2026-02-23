@@ -411,18 +411,18 @@ void maj_info_serveur() {  // mets à jour la variable globale "serveur"
 
 
 void premier_render() {
-    int x_off = 5; 
-    int y_off = 3;
+    // affichage du plateau
+    int x_off = CONST_X_OFF_GRILLE; 
+    int y_off = CONST_Y_OFF_GRILLE;
     for (int y=0; y<CONST_HAUTEUR_GRILLE_RENDER; y++) {
-        mvprintw(y_off+y, x_off, "|");
-        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE, "|");
+        mvprintw(y_off+y, x_off-1, "|");
+        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE+1, "|");
     }
-    for (int x=0; x<CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE; x++) {
+    for (int x=0; x<CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE+1; x++) {
         mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+x, "=");
     }
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off, "+");
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE, "+");
-
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off-1, "+");
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+CONST_LARGEUR_GRILLE_RENDER*CONST_LARGEUR_SCALE+1, "+");
 
     mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
