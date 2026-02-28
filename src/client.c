@@ -56,6 +56,7 @@ int idx_tetr;
 int idx_proch_tetr;
 int x_tetr;
 int y_tetr;
+int rot_tetr;
 
 
 // PROTOTYPES
@@ -341,6 +342,8 @@ int main(){
                         idx_tetr = generer_tetr();
                         idx_proch_tetr = generer_tetr();
 
+                        rot_tetr = 0;
+
                         pthread_mutex_unlock(&MUT_TETROMINO);
 
 
@@ -549,6 +552,16 @@ void tetromino_render(int idx_tetromino, int x, int y, int rot) {
 
 
 void render() {
+
+    // pièce actuelle
+    tetromino_render(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+
+
+    // prochaine pièce (efface puis affiche pour eviter les chevauchements)
+    mvprintw(CONST_Y_OFF_GRILLE  , CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
+    mvprintw(CONST_Y_OFF_GRILLE+1, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
+    mvprintw(CONST_Y_OFF_GRILLE+2, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
+    mvprintw(CONST_Y_OFF_GRILLE+3, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
     tetromino_render(idx_proch_tetr, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, CONST_Y_OFF_GRILLE, 0);
 }
 
