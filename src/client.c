@@ -68,6 +68,7 @@ void tetromino_effacer(int idx_tetromino, int x, int y, int rot);
 void tetromino_rotation(int tetromino[16], int rot);
 int generer_tetr();
 void render();
+bool_t collision_bords(int idx_tetromino, int x, int y, int rot);
 
 
 
@@ -360,7 +361,9 @@ int main(){
                         pthread_mutex_lock(&MUT_TETROMINO);
 
                         x_tetr--;
-                        // TODO: tester pour pas sortir de la zone de jeu
+                        if (collision_bords(idx_tetr, x_tetr, y_tetr, rot_tetr)) {
+                            x_tetr ++;
+                        }
 
                         tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE + 1, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
@@ -370,7 +373,9 @@ int main(){
                         pthread_mutex_lock(&MUT_TETROMINO);
                         
                         x_tetr++;
-                        // TODO: tester pour pas sortir de la zone de jeu
+                        if (collision_bords(idx_tetr, x_tetr, y_tetr, rot_tetr)) {
+                            x_tetr --;
+                        }
                         
                         tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE - 1, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
                        
@@ -521,6 +526,19 @@ void tetromino_rotation(int tetromino[16], int rot) {
 
 int generer_tetr() {
     return rand() % 7;
+}
+
+bool_t collision_bords(int idx_tetromino, int x, int y, int rot) {
+    int tetr[16];
+    memcpy(tetr, tetrominos[idx_tetromino], 16*sizeof(int));
+
+    tetromino_rotation(tetr, rot);
+
+
+    // TODO: finir
+
+
+    return FALSE;
 }
 
 // ------------------------------------------------------------------------------------------------ //
