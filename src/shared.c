@@ -78,7 +78,10 @@ void init_ncurses() {
     init_pair(4, COLOR_CYAN, COLOR_BLACK);  // CYAN sur fond NOIR       -> 4 
     init_pair(5, COLOR_MAGENTA, COLOR_BLACK);  // MAGENTA sur fond NOIR -> 5
     init_pair(6, COLOR_YELLOW, COLOR_BLACK);  // JAUNE sur fond NOIR    -> 6
-    init_pair(7, COLOR_BLUE, COLOR_BLACK);  // JAUNE sur fond NOIR    -> 6
+    init_pair(7, COLOR_BLUE, COLOR_BLACK);  // BLEU sur fond NOIR    -> 7
+    init_pair(8, COLOR_YELLOW, COLOR_YELLOW); //  JAUNE sur fond JAUNE -> 8
+    init_pair(9, COLOR_WHITE, COLOR_WHITE); //  BLANC sur fond BLANC -> 9
+    init_pair(10, COLOR_RED, COLOR_RED); //  ROUGE sur fond ROUGE -> 10
     attron(COLOR_PAIR(1));
     refresh();
 }
@@ -106,26 +109,4 @@ void affichage_lancement(){
     attron(COLOR_PAIR(1));
     
     refresh();
-}
-
-void affichage_podium(){
-    int x_off = 30; 
-    int y_off = 30;
-    clear(); 
-    affichage_logo(2, 23);
-    
-    mvprintw(10, 23, "We hope you enjoy the game"); 
-
-    attron(A_BOLD);
-    mvprintw(12, 30, "Results");
-    attroff(A_BOLD);
-    
-    for (int y=0; y<18; y++) {
-        mvprintw(y_off+y, x_off, "|");
-    }
-
-    mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
-
-
-    refresh(); 
 }

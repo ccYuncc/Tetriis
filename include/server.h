@@ -25,5 +25,9 @@ typedef struct {
     int nb_joueurs_en_partie; 
 } joueurs_t;
 
+typedef struct{
+    char pseudo[CONST_LONGUEUR_PSEUDO]; 
+    int event; // 1 = MORT / 2 = BONUS 
+} event_t; 
 
 #endif  // SERVER_H

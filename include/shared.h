@@ -109,7 +109,8 @@ typedef struct
 typedef struct{
   joueur_t premier; 
   joueur_t deuxieme; 
-  joueur_t troisieme;  
+  joueur_t troisieme;
+  char last_survivors[3][CONST_LONGUEUR_PSEUDO]; 
 } score_t; 
 
 typedef char reponse_serveur_t[CONST_LONGUEUR_REPONSE_SERVEUR];
@@ -146,6 +147,5 @@ void affichage_logo(int y, int x);
 void init_ncurses();  
 void affichage_compteur(int compteur, int points);
 void affichage_lancement();
-void affichage_podium(); 
 
 #endif  // SHARED_H

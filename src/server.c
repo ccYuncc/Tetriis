@@ -30,6 +30,7 @@ pthread_mutex_t MUT_JOUEURS_VIVANTS = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_CLOSE_ECOUTE = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_CLOSE_ECOUTE_PARTI = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_SCORE = PTHREAD_MUTEX_INITIALIZER; 
+pthread_mutex_t MUT_EVENT = PTHREAD_MUTEX_INITIALIZER; 
 
 // CONDITION 
 pthread_cond_t COND_TRY_CONNEXION = PTHREAD_COND_INITIALIZER;
@@ -41,6 +42,7 @@ int BAL_ID;
 joueurs_t joueurs_enregistre; 
 bool_t etat_joueurs[CONST_NOMBRE_JOUEURS]; 
 bool_t joueurs_vivants[CONST_NOMBRE_JOUEURS]; 
+event_t last_event; 
 
 // VARIABLES GLOBALE
 bool close_ecoute = FALSE; 
@@ -175,6 +177,12 @@ int main(){
         close_ecoute_parti = FALSE; 
         pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI);
 
+        pthread_mutex_lock(&MUT_EVENT); 
+        last_event.event = 0; 
+        strcpy(last_event.pseudo, "");
+        pthread_mutex_unlock(&MUT_EVENT); 
+
+
         #pragma endregion
     
     
@@ -272,11 +280,78 @@ int main(){
 
                 mvprintw(12, 23, "Nombre de joueurs en vie : %d/%d", check_end_game(), nbJoueurs); 
 
+                switch(last_event.event){
+                    case 1 : //  MORT D'UN JOUEUR 
+                        attron(A_BOLD);
+                        attron(COLOR_PAIR(3));
+                        pthread_mutex_lock(&MUT_EVENT); 
+                            mvprintw(15, 32, "%s", last_event.pseudo); 
+                        pthread_mutex_unlock(&MUT_EVENT); 
+                        attron(COLOR_PAIR(1));
+                        attroff(A_BOLD);
+                        printw(" est mort...");
+                        refresh(); 
+
+                        break; 
+
+                    case 2 : //  BONUS/MALUS D'UN JOUEUR
+                        // AFFICHAGE MALUS
+                        // AFFICHAGE MORT SUR LE SERVEUR
+                        pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+                        attron(A_BOLD);
+                        attron(COLOR_PAIR(2));
+                        pthread_mutex_lock(&MUT_EVENT); 
+                            mvprintw(14, 20, "%s", last_event.pseudo); 
+                        pthread_mutex_unlock(&MUT_EVENT); 
+                        attron(COLOR_PAIR(1));
+                        attroff(A_BOLD);
+                        printw(" a donne un jolie cadeau a tout le monde !");
+                        pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+                        refresh(); 
+
+                        break; 
+
+                    default : 
+                        break; 
+                }
+
+
                 mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
                 refresh(); 
  
-                usleep(5000000); // 1s
+                usleep(3000000); // 3s
             }
+
+            //Enregistrement du dernier joueur de la partie
+            //Récup index dernier survivant.
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            int nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+            int index; 
+            pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
+                for(int i = 0; i < nbJoueurs; i++){
+                    if(joueurs_vivants[i] == TRUE){
+                        index = i; 
+                        break;  
+                    }
+                }
+            pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS); 
+            char pseudo_joueur[CONST_LONGUEUR_PSEUDO]; 
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+                strcpy(pseudo_joueur, joueurs_enregistre.liste_joueurs[index].pseudo); 
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+
+            pthread_mutex_lock(&MUT_SCORE); 
+                        
+                sem_wait(SEM_SCORE); 
+            
+                    score_t * info_score = shmat(SHM_SCORE, NULL, 0); 
+                    strcpy(info_score->last_survivors[0], pseudo_joueur); 
+                    shmdt(info_score); 
+                    
+                sem_post(SEM_SCORE); 
+
+            pthread_mutex_unlock(&MUT_SCORE); 
 
             
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
@@ -297,14 +372,54 @@ int main(){
             // MODIFICATION ETAT DU SERVEUR
             changement_etat_serveur(PODIUM);  
 
+            int x_off = 30; 
+            int y_off = 30;
 
-            //clear(); 
-            //affichage_logo(2, 23); 
-            //mvprintw(7, 23, "Affichage podium"); 
-            //refresh(); 
+            clear(); 
+            affichage_logo(2, 23); 
+            mvprintw(10, 23, "We hope you enjoy the game"); 
 
-            affichage_podium(); 
+            attron(A_BOLD);
+            mvprintw(12, 30, "Results");
+            attroff(A_BOLD);
 
+
+            for(int i = 0; i < 5 ; i++){
+                attron(COLOR_PAIR(9));
+                mvprintw(18+i, 23, "________");  
+            }
+
+            for(int i = 0; i < 7; i++){
+                attron(COLOR_PAIR(8));
+                mvprintw(16+i, 31, "________"); 
+            }
+
+            for(int i = 0; i < 4; i++){
+                attron(COLOR_PAIR(10));
+                mvprintw(19+i, 39, "________");  
+            }
+
+            attron(COLOR_PAIR(1));
+
+            pthread_mutex_lock(&MUT_SCORE); 
+                        
+                sem_wait(SEM_SCORE); 
+            
+                    info_score = shmat(SHM_SCORE, NULL, 0); 
+                    
+                    mvprintw(17, 24, "%s", info_score->last_survivors[1]); 
+                    mvprintw(15, 32, "%s", info_score->last_survivors[0]); 
+                    mvprintw(18, 40, "%s", info_score->last_survivors[2]); 
+
+                    shmdt(info_score); 
+                    
+                sem_post(SEM_SCORE); 
+
+            pthread_mutex_unlock(&MUT_SCORE); 
+
+            mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+            refresh(); 
+            
             while(1); 
 
 
@@ -426,6 +541,7 @@ int main(){
         pid_t pid_joueur; 
 
         pid_t pid_joueur_premier; 
+        char pseudo_joueur[CONST_LONGUEUR_PSEUDO]; 
 
 
         while(1){
@@ -443,24 +559,36 @@ int main(){
                 int index_joueur = find_index_player(pid_joueur); 
                 pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
 
+                pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+                    strcpy(pseudo_joueur, joueurs_enregistre.liste_joueurs[index_joueur].pseudo); 
+                pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+
                 switch (msg_game_player.type_msg)
                 {
                 case GAME_MSG_DEATH:  // MORT D'UN JOUEUR
                     pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
                     joueurs_vivants[index_joueur] = FALSE; 
                     pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS); 
-                    
 
-                    // AFFICHAGE MORT SUR LE SERVEUR
-                    pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-                    attron(A_BOLD);
-                    attron(COLOR_PAIR(3));
-                    mvprintw(15, 32, "%s", joueurs_enregistre.liste_joueurs[index_joueur].pseudo); 
-                    attron(COLOR_PAIR(1));
-                    attroff(A_BOLD);
-                    printw(" est mort...");
-                    pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
-                    refresh(); 
+                    // STOCKER POUR AFFICHAGE MORT SUR LE SERVEUR
+                    pthread_mutex_lock(&MUT_EVENT);    
+                        last_event.event = 1; 
+                        strcpy(last_event.pseudo, pseudo_joueur); 
+                    pthread_mutex_unlock(&MUT_EVENT);
+
+                    if (check_end_game() < 3){
+                        pthread_mutex_lock(&MUT_SCORE); 
+                        
+                            sem_wait(SEM_SCORE); 
+                        
+                                score_t * info_score = shmat(SHM_SCORE, NULL, 0); 
+                                strcpy(info_score->last_survivors[check_end_game()], pseudo_joueur); 
+                                shmdt(info_score); 
+                                
+                            sem_post(SEM_SCORE); 
+
+                        pthread_mutex_unlock(&MUT_SCORE); 
+                    }
 
 
                     break;
@@ -497,20 +625,11 @@ int main(){
 
                     pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
 
-
-                    // AFFICHAGE MALUS
-                    // AFFICHAGE MORT SUR LE SERVEUR
-                    pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-                    attron(A_BOLD);
-                    attron(COLOR_PAIR(2));
-                    mvprintw(14, 20, "%s", joueurs_enregistre.liste_joueurs[index_joueur].pseudo); 
-                    attron(COLOR_PAIR(1));
-                    attroff(A_BOLD);
-                    printw(" a donne un jolie cadeau a tout le monde !");
-                    pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
-                    refresh(); 
-
-
+                    // STOCKER POUR AFFICHAGE BONUS/MALUS SUR LE SERVEUR
+                    pthread_mutex_lock(&MUT_EVENT);    
+                        last_event.event = 2; 
+                        strcpy(last_event.pseudo, pseudo_joueur); 
+                    pthread_mutex_unlock(&MUT_EVENT);
 
                     break; 
                 
