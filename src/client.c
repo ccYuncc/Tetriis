@@ -27,6 +27,7 @@ int BAL_ID;
 
 // MUTEXS
 pthread_mutex_t MUT_INFO_SERVEUR = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t MUT_TETROMINO = PTHREAD_MUTEX_INITIALIZER;
 
 // AUTRES
 info_serveur_t serveur; // informations du serveur tetriis
@@ -50,7 +51,11 @@ int couleurs_tetrominos[7] = {  // correspond à l'id des paires de couleurs de 
     3, // L : orange (existe pas donc rouge)
     7, // J : bleu
 };
-int temp_idx = 0;  // TODO: supprimer après les tests
+
+int idx_tetr;
+int idx_proch_tetr;
+int x_tetr;
+int y_tetr;
 
 
 // PROTOTYPES
@@ -59,6 +64,7 @@ void deroute(int signal);
 void premier_render();
 void tetromino_render(int idx_tetromino, int x, int y, int rot);
 void tetromino_rotation(int tetromino[16], int rot);
+int generer_tetr();
 void render();
 
 
@@ -327,6 +333,17 @@ int main(){
                     if (_premiere_exec) {
                         // code éxecuté la première fois en mode PARTIE (style qualificatif P1 en automatisme)
 
+                        pthread_mutex_lock(&MUT_TETROMINO);
+
+                        x_tetr = CONST_LARGEUR_GRILLE / 2 - 2;
+                        y_tetr = -4;
+
+                        idx_tetr = generer_tetr();
+                        idx_proch_tetr = generer_tetr();
+
+                        pthread_mutex_unlock(&MUT_TETROMINO);
+
+
                         clear();
 
                         premier_render();  // pour afficher les éléments statiques du GUI
@@ -334,12 +351,8 @@ int main(){
                         _premiere_exec = FALSE;
                     }
 
-                    //render();
+                    render();
 
-                    clear();
-                    temp_idx ++;
-                    temp_idx %= 4;
-                    tetromino_render(4, 10, 10, temp_idx);  // T pour voir les 4 rotations
                     getch();
                     
 
@@ -482,6 +495,10 @@ void tetromino_rotation(int tetromino[16], int rot) {
     return;
 }
 
+int generer_tetr() {
+    return rand() % 7;
+}
+
 // ------------------------------------------------------------------------------------------------ //
 #pragma endregion
 
@@ -494,15 +511,18 @@ void premier_render() {
     // affichage du plateau
     int x_off = CONST_X_OFF_GRILLE; 
     int y_off = CONST_Y_OFF_GRILLE;
-    for (int y=0; y<CONST_HAUTEUR_GRILLE_RENDER; y++) {
+    for (int y=0; y<CONST_HAUTEUR_GRILLE; y++) {
         mvprintw(y_off+y, x_off-1, "|");
-        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE_RENDER+1, "|");
+        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE+1, "|");
     }
-    for (int x=0; x<CONST_LARGEUR_GRILLE_RENDER+1; x++) {
-        mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+x, "=");
+    for (int x=0; x<CONST_LARGEUR_GRILLE+1; x++) {
+        mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+x, "=");
     }
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off-1, "+");
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE_RENDER, x_off+CONST_LARGEUR_GRILLE_RENDER+1, "+");
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off-1, "+");
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+CONST_LARGEUR_GRILLE+1, "+");
+
+    mvprintw(CONST_Y_OFF_GRILLE-1, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "Next :");
+
 
     mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
@@ -520,7 +540,7 @@ void tetromino_render(int idx_tetromino, int x, int y, int rot) {
     for (int _x =0; _x < 4; _x++) {
         for (int _y=0; _y<4; _y++) {
             if (tetr[_x*4+_y]) {
-                mvprintw(x+_x, y+_y, "#");
+                mvprintw(y+_y,x+_x, "#");
             }
         }
     }
@@ -529,7 +549,7 @@ void tetromino_render(int idx_tetromino, int x, int y, int rot) {
 
 
 void render() {
-
+    tetromino_render(idx_proch_tetr, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, CONST_Y_OFF_GRILLE, 0);
 }
 
 
