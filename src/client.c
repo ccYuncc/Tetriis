@@ -58,6 +58,7 @@ void maj_info_serveur();
 void deroute(int signal);
 void premier_render();
 void tetromino_render(int idx_tetromino, int x, int y, int rot);
+void tetromino_rotation(int tetromino[16], int rot);
 void render();
 
 
@@ -337,8 +338,8 @@ int main(){
 
                     clear();
                     temp_idx ++;
-                    temp_idx %= 7;
-                    tetromino_render(temp_idx, 10, 10, 0);
+                    temp_idx %= 4;
+                    tetromino_render(4, 10, 10, temp_idx);  // T pour voir les 4 rotations
                     getch();
                     
 
@@ -432,6 +433,55 @@ void maj_info_serveur() {  // mets à jour la variable globale "serveur"
     sem_post(SEM_INFO_SERVEUR);  // SHM DE NOUVEAU DISPONIBLE -> SEM REMISE
 }
 
+void tetromino_rotation(int tetromino[16], int rot) {
+
+    int tetr_modif[16];
+
+    // voir le canva pour le graphique (c"est plus clair)
+    // https://www.canva.com/design/DAG96A7aaU0/DesScJkOnfjSMdZ-axWK7w/edit
+
+    switch (rot) {
+        case 0:
+            // 0°
+            // pas de rotation
+            break;
+        case 1:
+            // 90°
+            for (int y=0; y<4; y++) {
+                for (int x=0; x<4; x++) {
+                    tetr_modif[y*4+x] = tetromino[y + (3-x)*4];
+                }
+            }
+
+            memcpy(tetromino, tetr_modif, 16*sizeof(int));
+
+            break;
+        case 2:
+            // 180°
+            for (int i=0; i<16; i++) {
+                tetr_modif[i] = tetromino[15-i];
+                
+            }
+
+            memcpy(tetromino, tetr_modif, 16*sizeof(int));
+
+            break;
+        case 3:
+            // 270°
+            for (int y=0; y<4; y++) {
+                for (int x=0; x<4; x++) {
+                    tetr_modif[y*4+x] = tetromino[(3-y) + x*4];
+                }
+            }
+
+            memcpy(tetromino, tetr_modif, 16*sizeof(int));
+
+            break;
+    }
+
+    return;
+}
+
 // ------------------------------------------------------------------------------------------------ //
 #pragma endregion
 
@@ -462,6 +512,8 @@ void premier_render() {
 void tetromino_render(int idx_tetromino, int x, int y, int rot) {
     int tetr[16];
     memcpy(tetr, tetrominos[idx_tetromino], 16*sizeof(int));
+
+    tetromino_rotation(tetr, rot);
 
 
     attron(COLOR_PAIR(couleurs_tetrominos[idx_tetromino]));
