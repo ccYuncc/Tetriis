@@ -64,6 +64,7 @@ void maj_info_serveur();
 void deroute(int signal);
 void premier_render();
 void tetromino_render(int idx_tetromino, int x, int y, int rot);
+void tetromino_effacer(int idx_tetromino, int x, int y, int rot);
 void tetromino_rotation(int tetromino[16], int rot);
 int generer_tetr();
 void render();
@@ -354,11 +355,31 @@ int main(){
                         _premiere_exec = FALSE;
                     }
 
-                    render();
+                    char touche = getch();
+                    if (touche == 'a') {
+                        pthread_mutex_lock(&MUT_TETROMINO);
 
-                    getch();
+                        x_tetr--;
+                        // TODO: tester pour pas sortir de la zone de jeu
+
+                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE + 1, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+
+                        pthread_mutex_unlock(&MUT_TETROMINO);
+                    }
+                    else if (touche == 'e') {
+                        pthread_mutex_lock(&MUT_TETROMINO);
+                        
+                        x_tetr++;
+                        // TODO: tester pour pas sortir de la zone de jeu
+                        
+                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE - 1, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+                       
+                        pthread_mutex_unlock(&MUT_TETROMINO);
+                    }
                     
 
+                    // maj de l'affuchage après la logique finie
+                    render();
                     refresh();
 
                 #else  // section en mode test
@@ -550,6 +571,20 @@ void tetromino_render(int idx_tetromino, int x, int y, int rot) {
     attron(COLOR_PAIR(1));
 }
 
+void tetromino_effacer(int idx_tetromino, int x, int y, int rot) {  // comme tetromino_render mais on affiche des espaces à la place
+    int tetr[16];
+    memcpy(tetr, tetrominos[idx_tetromino], 16*sizeof(int));
+
+    tetromino_rotation(tetr, rot);
+
+    for (int _x =0; _x < 4; _x++) {
+        for (int _y=0; _y<4; _y++) {
+            if (tetr[_x*4+_y]) {
+                mvprintw(y+_y,x+_x, " ");
+            }
+        }
+    }
+}
 
 void render() {
 
