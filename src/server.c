@@ -49,21 +49,27 @@ bool close_ecoute = FALSE;
 bool close_ecoute_parti = FALSE; 
 
 // PROTOTYPE
-void * thread_connexion(void * arg);
-void * thread_ecoute(void * arg); 
-void * thread_ecoute_parti(void * arg); 
-void affichage_serveur();  
-void affichage_liste_joueurs();
-void changement_etat_serveur(etat_serveur_t etat_serveur); 
-int find_index_player(pid_t pid_joueur); 
-void affichage_liste_joueur_etat(); 
-bool ready_player_start(); 
-void affichage_attente(); 
-int nb_ready_player(); 
+    // ----- THREAD -----
+void * thread_connexion(void * arg); //  THREAD ECOUTE CONNEXION DES JOUEURS
+void * thread_ecoute(void * arg); //  THREAD ECOUTE ATTENTE DE LA PARTIE
+void * thread_ecoute_parti(void * arg); //  THREAD ECOUTE DURANT LA PARTIE
+
+    // ----- AFFICHAGE -----
+void affichage_serveur(); //  TEXTUEL : AFFICHAGE DES DONNEES DES SHM DU SERVEUR
+void affichage_liste_joueurs(); //  DEBUG : AFFICHAGE DE LA LISTE DES JOUEURS
+void affichage_liste_joueur_etat(); //  DEBUG : AFFICHAGE ETAT DES JOUEURS
+void affichage_attente(); //  NCURSES : AFFICHAGE D'ATTENTE
+
+    // ----- LECTURE/ECRITURE DONNEES -----
+void changement_etat_serveur(etat_serveur_t etat_serveur); //  MODIFIE L'ETAT DU SERVEUR (ATTENTE, PARTIE, PODIUM)
+int find_index_player(pid_t pid_joueur); //  TROUVE L'INDEX DU JOUEUR SELON SON PID
+bool ready_player_start(); //  TEST : VALIDE LE LANCEMENT DE LA PARTIE OU NON
+int nb_ready_player(); //  CALCUL NOMBRE DE JOUEURS PRÊTS
+
+    // ----- GESTION DES ELEMENTS DE DONNEES -----
 void deroute(); 
 void close_shm_sem();
 int check_end_game(); 
-void send_message_all_player(int msg, pid_t joueur_origine); 
 
 
 int main(){
@@ -71,6 +77,7 @@ int main(){
     #pragma region INIT
     // --------------------------------------- INIT --------------------------------------- //
     int nbJoueurs; 
+    int rows, cols; 
     
     pthread_t TH_CONNEXION; 
     pthread_t TH_ECOUTE;  
@@ -164,9 +171,11 @@ int main(){
 
     
     #pragma region JEU
-    while(1){
+    do
+    {
     // --------------------------------------- JEU --------------------------------------- //
         #pragma region REINIT 
+        // REINITIALISATION DES DONNEES APRES UNE PARTIE 
         init_ncurses(); 
 
         pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
@@ -207,9 +216,6 @@ int main(){
             joueurs_enregistre.nb_joueurs_en_partie = 0; 
             pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
 
-            // AFFICHAGE ATTENTE NCURSES
-            affichage_attente(); 
-
             while(!ready_player_start()){
                 // ncurses ne fonctionne pas avec les threads 
                 affichage_attente(); 
@@ -247,7 +253,6 @@ int main(){
 
         #pragma region COMPTEUR
         // AFFICHAGE DU LANCEMENT DE LA PARTIE 
-        //printw("AFFICHAGE COMPTEUR"); 
 
         for (int s=3; s>0; s--) {
             for (int p=1; p<4; p++) {
@@ -268,24 +273,25 @@ int main(){
             pthread_create(&TH_ECOUTE_PARTI, NULL, thread_ecoute_parti, NULL);
 
             
-            while(check_end_game() != 1){   // ATTENTE DE FIN DE PARTIE
+            do{   // ATTENTE DE FIN DE PARTIE
                 //  Affichage
+                getmaxyx(stdscr, rows, cols);
                 clear(); 
-                affichage_logo(2, 23); 
-                mvprintw(7, 23, "Game in progress..."); 
+                affichage_logo(2, ((cols-34)/2)); 
+                mvprintw(7, ((cols-19)/2), "Game in progress..."); 
 
                 pthread_mutex_lock(&MUT_LISTE_JOUEURS);
                 nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
                 pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
-                mvprintw(12, 23, "Nombre de joueurs en vie : %d/%d", check_end_game(), nbJoueurs); 
+                mvprintw(12, ((cols-30)/2), "Nombre de joueurs en vie : %d/%d", check_end_game(), nbJoueurs); 
 
                 switch(last_event.event){
                     case 1 : //  MORT D'UN JOUEUR 
                         attron(A_BOLD);
                         attron(COLOR_PAIR(3));
                         pthread_mutex_lock(&MUT_EVENT); 
-                            mvprintw(15, 32, "%s", last_event.pseudo); 
+                            mvprintw(15, ((cols-22)/2), "%s", last_event.pseudo); 
                         pthread_mutex_unlock(&MUT_EVENT); 
                         attron(COLOR_PAIR(1));
                         attroff(A_BOLD);
@@ -301,7 +307,7 @@ int main(){
                         attron(A_BOLD);
                         attron(COLOR_PAIR(2));
                         pthread_mutex_lock(&MUT_EVENT); 
-                            mvprintw(14, 20, "%s", last_event.pseudo); 
+                            mvprintw(14, ((cols-50)/2), "%s", last_event.pseudo); 
                         pthread_mutex_unlock(&MUT_EVENT); 
                         attron(COLOR_PAIR(1));
                         attroff(A_BOLD);
@@ -316,12 +322,12 @@ int main(){
                 }
 
 
-                mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+                mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
                 refresh(); 
  
-                usleep(3000000); // 3s
-            }
-
+                usleep(1000000); // 1s
+            } while(check_end_game() != 1); 
+ 
             //Enregistrement du dernier joueur de la partie
             //Récup index dernier survivant.
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
@@ -371,61 +377,69 @@ int main(){
             // --------------------------------------- PODIUM --------------------------------------- //
             // MODIFICATION ETAT DU SERVEUR
             changement_etat_serveur(PODIUM);  
+            do
+            {
+                getmaxyx(stdscr, rows, cols); 
 
-            int x_off = 30; 
-            int y_off = 30;
+                clear(); 
+                affichage_logo(2, ((cols-34)/2)); 
+                mvprintw(7, ((cols-26)/2), "We hope you enjoy the game"); 
 
-            clear(); 
-            affichage_logo(2, 23); 
-            mvprintw(10, 23, "We hope you enjoy the game"); 
-
-            attron(A_BOLD);
-            mvprintw(12, 30, "Results");
-            attroff(A_BOLD);
+                attron(A_BOLD);
+                mvprintw((rows/2)-3, ((cols-7)/2), "Results");
+                attroff(A_BOLD);
 
 
-            for(int i = 0; i < 5 ; i++){
-                attron(COLOR_PAIR(9));
-                mvprintw(18+i, 23, "________");  
-            }
+                for(int i = 0; i < 5 ; i++){
+                    attron(COLOR_PAIR(9));
+                    mvprintw((rows/2)+4+i, (cols/6)-8, "________");  
+                    mvprintw((rows/2)+4+i, (4*cols/6)-8, "________"); 
+                }
 
-            for(int i = 0; i < 7; i++){
-                attron(COLOR_PAIR(8));
-                mvprintw(16+i, 31, "________"); 
-            }
+                for(int i = 0; i < 7; i++){
+                    attron(COLOR_PAIR(8));
+                    mvprintw((rows/2)+2+i, (cols/6), "________"); 
+                    mvprintw((rows/2)+2+i, (4*cols/6), "________"); 
+                }
 
-            for(int i = 0; i < 4; i++){
-                attron(COLOR_PAIR(10));
-                mvprintw(19+i, 39, "________");  
-            }
+                for(int i = 0; i < 4; i++){
+                    attron(COLOR_PAIR(10));
+                    mvprintw((rows/2)+5+i, (cols/6)+8, "________");  
+                    mvprintw((rows/2)+5+i, (4*cols/6)+8, "________"); 
+                }
 
-            attron(COLOR_PAIR(1));
+                attron(COLOR_PAIR(1));
 
-            pthread_mutex_lock(&MUT_SCORE); 
+                pthread_mutex_lock(&MUT_SCORE); 
+                            
+                    sem_wait(SEM_SCORE); 
+                
+                        info_score = shmat(SHM_SCORE, NULL, 0); 
                         
-                sem_wait(SEM_SCORE); 
-            
-                    info_score = shmat(SHM_SCORE, NULL, 0); 
-                    
-                    mvprintw(17, 24, "%s", info_score->last_survivors[1]); 
-                    mvprintw(15, 32, "%s", info_score->last_survivors[0]); 
-                    mvprintw(18, 40, "%s", info_score->last_survivors[2]); 
+                        mvprintw((rows/2)+3, (cols/6)-7, "%s", info_score->last_survivors[1]); 
+                        mvprintw((rows/2)+1, (cols/6)+1, "%s", info_score->last_survivors[0]); 
+                        mvprintw((rows/2)+4, (cols/6)+9, "%s", info_score->last_survivors[2]); 
 
-                    shmdt(info_score); 
-                    
-                sem_post(SEM_SCORE); 
+                        mvprintw((rows/2)+3, (4*cols/6)-7, "%s", info_score->deuxieme.login_joueur.pseudo); 
+                        mvprintw((rows/2)+3, (4*cols/6)+1, "%s", info_score->deuxieme.login_joueur.pseudo); 
+                        mvprintw((rows/2)+3, (4*cols/6)+9, "%s", info_score->deuxieme.login_joueur.pseudo); 
 
-            pthread_mutex_unlock(&MUT_SCORE); 
 
-            mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
-            refresh(); 
-            
-            while(1); 
+                        shmdt(info_score); 
+                        
+                    sem_post(SEM_SCORE); 
+
+                pthread_mutex_unlock(&MUT_SCORE); 
+
+                mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+                refresh(); 
+                usleep(500000); // 50ms
+            } while (1);
 
 
             // -------------------------------------------------------------------------------------------------- //
         #pragma endregion
-    }
+    } while (1);
 
     // -------------------------------------------------------------------------------------------------- //
     #pragma endregion
@@ -440,6 +454,7 @@ int main(){
 
 
     sem_close(SEM_SCORE); 
+    endwin(); 
     // ------------------------------------------------------------------------------------ //
     #pragma endregion
 
@@ -726,24 +741,35 @@ int main(){
 #pragma region FONCTION NCURSES 
 // --------------------------------------- FONCTION NCURSES --------------------------------------- //
 void affichage_attente(){
+    
     int nbJoueurs = 0; 
-    int index_joueurs; 
+    int index_joueurs;
+    int rows, cols; 
+    
+    getmaxyx(stdscr, rows, cols); 
+
     clear(); 
-    affichage_logo(2, 23); 
-    mvprintw(7, 23, "Waiting room..."); 
-    mvprintw(8, 23, "Welcome to the game : Tetriis !!"); 
-    mvprintw(10, 23, "Use [ENTER] to be ready / not ready"); 
+    affichage_logo(2, ((cols-34)/2)); 
+    mvprintw(7, ((cols-15)/2), "Waiting room..."); 
+    mvprintw(8, ((cols-32)/2), "Welcome to the game : Tetriis !!"); 
+    mvprintw(10, ((cols-34)/2), "Use"); 
+    attron(A_BOLD);
+    printw("[ENTER]");
+    attroff(A_BOLD); 
+    printw(" to be ready / not ready"); 
 
     pthread_mutex_lock(&MUT_LISTE_JOUEURS);
     nbJoueurs = joueurs_enregistre.nb_joueurs; 
     pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
     
-    mvprintw(12, 23, "Players : %d", nbJoueurs); 
+    mvprintw(12, ((cols-10)/2), "Players : %d", nbJoueurs); 
     if (nbJoueurs < 3){
-        mvprintw(13, 23, "Players ready to start : %d / %d" , nb_ready_player(), 3); 
+        attron(COLOR_PAIR(3)); 
+        mvprintw(13, ((cols-40)/2), "Waiting for more players before starting");
+        attron(COLOR_PAIR(1));  
     }else{
-        mvprintw(13, 23, "Players ready to start : %d / %d" , nb_ready_player(), (int)((float)nbJoueurs*0.75)); 
+        mvprintw(13, ((cols-30)/2), "Players ready to start : %d / %d" , nb_ready_player(), (int)((float)nbJoueurs*0.75)); 
     }
 
     if(nbJoueurs > 0){
@@ -758,7 +784,7 @@ void affichage_attente(){
                     attron(COLOR_PAIR(3)); //  Joueur pas prêt ROUGE
                 }
 
-                mvprintw(15+(i/3), 8+((i%3)*CONST_LONGUEUR_PSEUDO), "<  %s  >", joueurs_enregistre.liste_joueurs[i].pseudo); 
+                mvprintw(15+(i/3), (cols/6)+((i%3)*CONST_LONGUEUR_PSEUDO), "<  %s  >", joueurs_enregistre.liste_joueurs[i].pseudo); 
 
                 attron(COLOR_PAIR(1));
             }
@@ -768,7 +794,7 @@ void affichage_attente(){
     }
 
     
-    mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+    mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
     refresh(); 
 }

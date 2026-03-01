@@ -87,12 +87,14 @@ void init_ncurses() {
 }
 
 void affichage_compteur(int compteur, int points) {
+    int rows, cols;
+    getmaxyx(stdscr, rows, cols);  
     clear(); 
-    affichage_logo(2, 23); 
+    affichage_logo(2, ((cols-34)/2)); 
     if(compteur == 1) attron(COLOR_PAIR(4)); 
     else if(compteur == 2) attron(COLOR_PAIR(5)); 
     else if(compteur == 3) attron(COLOR_PAIR(6)); 
-    mvprintw(10, 35, "%d", compteur); 
+    mvprintw(10, ((cols-4)/2), "%d", compteur); 
     for (int i=0; i<points; i++) {
         printw(".");
     }
@@ -101,11 +103,13 @@ void affichage_compteur(int compteur, int points) {
 }
 
 void affichage_lancement(){
+    int rows, cols;
+    getmaxyx(stdscr, rows, cols);  
     clear(); 
-    affichage_logo(2, 23); 
+    affichage_logo(2, ((cols-34)/2)); 
     attron(COLOR_PAIR(2));
-    mvprintw(10, 35, "Let's go !!"); 
-    mvprintw(12, 35, "Have fun !!"); 
+    mvprintw(10, ((cols-11)/2), "Let's go !!"); 
+    mvprintw(12, ((cols-11)/2), "Have fun !!"); 
     attron(COLOR_PAIR(1));
     
     refresh();
