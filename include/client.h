@@ -24,4 +24,6 @@
 #define CONST_X_OFF_GRILLE 5
 #define CONST_Y_OFF_GRILLE 3
 
+#define CONST_GRAVITE_SLEEP_US 500 * 1000 // 500ms
+
 #endif  // CLIENT_H

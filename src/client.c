@@ -28,6 +28,7 @@ int BAL_ID;
 // MUTEXS
 pthread_mutex_t MUT_INFO_SERVEUR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_TETROMINO = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t MUT_THREAD_GRAVITE = PTHREAD_MUTEX_INITIALIZER;
 
 // AUTRES
 info_serveur_t serveur; // informations du serveur tetriis
@@ -58,6 +59,8 @@ int x_tetr;
 int y_tetr;
 int rot_tetr;
 
+bool_t  thread_gravite_while;
+
 
 // PROTOTYPES
 void maj_info_serveur();
@@ -69,7 +72,9 @@ void tetromino_rotation(int tetromino[16], int rot);
 int generer_tetr();
 void render();
 bool_t collision_bords();
+bool_t collision_bas();
 
+void * thread_gravite(void * arg);
 
 
 
@@ -78,11 +83,13 @@ int main(){
     #pragma region INIT
     // --------------------------------------- INIT --------------------------------------- //
     #ifdef MODE_TEST
-        printf("ATTENTION: Complé en mode TEST !\n");
+        printf("ATTENTION: Compilé en mode TEST !\n");
 
         // variables utiles au mode test:
         int data = 0;
     #endif  // MODE_TEST
+
+    pthread_t TH_GRAVITE;
 
     // OUVERTURE DES SEMAPHORES
     SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR, 0); 
@@ -248,6 +255,12 @@ int main(){
             if (_premiere_exec) {
                 // code éxecuté la première fois en mode ATTENTE (style qualificatif P1 en automatisme)
 
+                pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+
+                    thread_gravite_while = FALSE;
+
+                pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
+
                 affichage_logo(2, 23);
                 
                 mvprintw(7, 13, "Waiting room..."); 
@@ -317,6 +330,12 @@ int main(){
                 
                 _attente_effectuee = FALSE;  // on a fini la partie, on doit repasser par l'attente
 
+                pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+
+                    thread_gravite_while = FALSE;
+
+                pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
+
 
                 _premiere_exec = FALSE;
             }
@@ -352,6 +371,14 @@ int main(){
                         clear();
 
                         premier_render();  // pour afficher les éléments statiques du GUI
+
+                        pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+
+                            thread_gravite_while = TRUE;  // on "active" le thread qui fait tomber les pièces
+
+                        pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
+                        pthread_create(&TH_GRAVITE, NULL, thread_gravite, NULL);  // puis une fois la condition activée on crée le thread
+
                         
                         _premiere_exec = FALSE;
                     }
@@ -552,6 +579,30 @@ bool_t collision_bords() {
     return FALSE;
 }
 
+bool_t collision_bas() {
+    int tetr[16];
+    memcpy(tetr, tetrominos[idx_tetr], 16*sizeof(int));
+
+    tetromino_rotation(tetr, rot_tetr);
+
+
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+
+            if (tetr[y*4+x]) {
+
+                int grille_y = y_tetr + y;
+
+                if (grille_y >= CONST_HAUTEUR_GRILLE) {
+                    return TRUE;  // tout en bas -> collision
+                }
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 // ------------------------------------------------------------------------------------------------ //
 #pragma endregion
 
@@ -634,6 +685,58 @@ void render() {
 // ----------------------------------------------------------------------------------------- //
 #pragma endregion
 
+
+#pragma region THREAD
+// --------------------------------------- THREAD --------------------------------------- //
+void * thread_gravite(void * arg) {
+    
+
+    // TODO: ne pas oublier de le join quand on quitte le mode partie
+
+    bool_t activ = TRUE;
+
+    while (activ) {
+
+        usleep(CONST_GRAVITE_SLEEP_US);  // delai
+
+        pthread_mutex_lock(&MUT_TETROMINO);
+
+
+            y_tetr++;  // on descend la piece
+
+            if (collision_bas() || FALSE) {  // TODO: check aussi avec les pièces de la grille
+                y_tetr--;
+
+                // TODO: figer la pièce dans la grille
+                // TODO: check si problème au figeage -> perdu !
+                // TODO: basculer sur la nouvelle pièce
+                // TODO: regénérer la pièce suivante
+                // TODO: reset la position du tetrmonio en haut de la grille
+            }
+
+            tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE-1, rot_tetr);
+
+
+        pthread_mutex_unlock(&MUT_TETROMINO);
+
+        render();
+        refresh();        
+
+
+        // on quitte le thread ?
+        pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+
+            activ = thread_gravite_while;
+
+        pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
+    }
+    
+    pthread_exit(0); 
+}
+
+
+// ------------------------------------------------------------------------------------ //
+#pragma endregion 
 
 
 

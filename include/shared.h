@@ -31,6 +31,7 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <ncurses.h>
+#include <unistd.h>
 
 
 #define CONST_SEM_NOM_INFO_SERVEUR "/TETRIIS_SEM_INFO_SERVEUR"
