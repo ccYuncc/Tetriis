@@ -68,7 +68,7 @@ void tetromino_effacer(int idx_tetromino, int x, int y, int rot);
 void tetromino_rotation(int tetromino[16], int rot);
 int generer_tetr();
 void render();
-bool_t collision_bords(int idx_tetromino, int x, int y, int rot);
+bool_t collision_bords();
 
 
 
@@ -361,7 +361,7 @@ int main(){
                         pthread_mutex_lock(&MUT_TETROMINO);
 
                         x_tetr--;
-                        if (collision_bords(idx_tetr, x_tetr, y_tetr, rot_tetr)) {
+                        if (collision_bords()) {
                             x_tetr ++;
                         }
 
@@ -373,7 +373,7 @@ int main(){
                         pthread_mutex_lock(&MUT_TETROMINO);
                         
                         x_tetr++;
-                        if (collision_bords(idx_tetr, x_tetr, y_tetr, rot_tetr)) {
+                        if (collision_bords()) {
                             x_tetr --;
                         }
                         
@@ -528,15 +528,26 @@ int generer_tetr() {
     return rand() % 7;
 }
 
-bool_t collision_bords(int idx_tetromino, int x, int y, int rot) {
+bool_t collision_bords() {
     int tetr[16];
-    memcpy(tetr, tetrominos[idx_tetromino], 16*sizeof(int));
+    memcpy(tetr, tetrominos[idx_tetr], 16*sizeof(int));
 
-    tetromino_rotation(tetr, rot);
+    tetromino_rotation(tetr, rot_tetr);
 
 
-    // TODO: finir
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
 
+            if (tetr[y*4+x]) {
+
+                int grille_x = x_tetr + x;
+
+                if (grille_x < 0 || grille_x >= CONST_LARGEUR_GRILLE) {
+                    return TRUE;  // en dehors des bords -> collision
+                }
+            }
+        }
+    }
 
     return FALSE;
 }
@@ -555,13 +566,13 @@ void premier_render() {
     int y_off = CONST_Y_OFF_GRILLE;
     for (int y=0; y<CONST_HAUTEUR_GRILLE; y++) {
         mvprintw(y_off+y, x_off-1, "|");
-        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE+1, "|");
+        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE, "|");
     }
-    for (int x=0; x<CONST_LARGEUR_GRILLE+1; x++) {
+    for (int x=0; x<CONST_LARGEUR_GRILLE; x++) {
         mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+x, "=");
     }
     mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off-1, "+");
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+CONST_LARGEUR_GRILLE+1, "+");
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+CONST_LARGEUR_GRILLE, "+");
 
     mvprintw(CONST_Y_OFF_GRILLE-1, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "Next :");
 
