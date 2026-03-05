@@ -75,6 +75,7 @@ int generer_tetr();
 void render();
 bool_t collision_bords();
 bool_t collision_bas();
+bool_t collision_grille();
 bool_t ajouter_tetr_grille();
 
 void * thread_gravite(void * arg);
@@ -395,7 +396,7 @@ int main(){
                         tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
                         x_tetr--;
-                        if (collision_bords()) {
+                        if (collision_bords() || collision_grille()) {
                             x_tetr ++;
                         }
 
@@ -408,7 +409,7 @@ int main(){
                         tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
                         x_tetr++;
-                        if (collision_bords()) {
+                        if (collision_bords() || collision_grille()) {
                             x_tetr --;
                         }
                        
@@ -420,7 +421,7 @@ int main(){
                         tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
                         
                         rot_tetr = (rot_tetr+1)%4;
-                        if (collision_bords()) {
+                        if (collision_bords() || collision_grille()) {
                             rot_tetr = (rot_tetr+3)%4;  // +3 plutot que -1 pour évouter le fait que -1%4 donne -1
                         }
                        
@@ -620,6 +621,30 @@ bool_t collision_bas() {
     return FALSE;
 }
 
+bool_t collision_grille() {
+    int tetr[16];
+    memcpy(tetr, tetrominos[idx_tetr], 16*sizeof(int));
+
+    tetromino_rotation(tetr, rot_tetr);
+
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+
+            if (tetr[y*4+x]) {
+
+                int grille_x = x_tetr + x;
+                int grille_y = y_tetr + y;
+
+                if (grille_x > 0 && grille_x < CONST_LARGEUR_GRILLE  && grille_y > 0 && grille_y < CONST_HAUTEUR_GRILLE) {
+                    if (grille[grille_y][grille_x] != 0) return TRUE;
+                } 
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 bool_t ajouter_tetr_grille() {
     int tetr[16];
     memcpy(tetr, tetrominos[idx_tetr], 16*sizeof(int));
@@ -758,7 +783,7 @@ void * thread_gravite(void * arg) {
 
             y_tetr++;  // on descend la piece
 
-            if (collision_bas() || FALSE) {  // TODO: check aussi avec les pièces de la grille
+            if (collision_bas() || collision_grille()) {
                 y_tetr--;
 
                 if (ajouter_tetr_grille()) {
