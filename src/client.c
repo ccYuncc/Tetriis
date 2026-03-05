@@ -71,12 +71,14 @@ void premier_render();
 void tetromino_render(int idx_tetromino, int x, int y, int rot);
 void tetromino_effacer(int idx_tetromino, int x, int y, int rot);
 void tetromino_rotation(int tetromino[16], int rot);
+void effacer_grille();
 int generer_tetr();
 void render();
 bool_t collision_bords();
 bool_t collision_bas();
 bool_t collision_grille();
 bool_t ajouter_tetr_grille();
+int supprimer_lignes();
 
 void * thread_partie(void * arg);
 
@@ -671,6 +673,30 @@ bool_t ajouter_tetr_grille() {
     return FALSE;
 }
 
+int supprimer_lignes() {
+    int ligne_effacees = 0;
+
+    for (int i=CONST_HAUTEUR_GRILLE-1; i>=0; i--) {
+        bool_t flag = TRUE;
+        for (int x=0; x<CONST_LARGEUR_GRILLE; x++) {
+            if (grille[i][x] == 0) {
+                flag = FALSE;
+                break;
+            }
+        }
+        if (flag) {  // ligne complète
+            for (int y=i; y>=1; y--) {
+                memcpy(grille[y], grille[y-1], sizeof(grille[0]));
+            }
+
+
+            ligne_effacees ++;
+        }
+    }
+
+    return ligne_effacees;
+}
+
 // ------------------------------------------------------------------------------------------------ //
 #pragma endregion
 
@@ -759,6 +785,14 @@ void render() {
 }
 
 
+void effacer_grille() {
+    for (int x =0; x < CONST_LARGEUR_GRILLE; x++) {
+        for (int y=0; y<CONST_HAUTEUR_GRILLE; y++) {
+            mvprintw(CONST_Y_OFF_GRILLE+y, CONST_X_OFF_GRILLE+x, " ");
+        }
+    }
+}
+
 
 // ----------------------------------------------------------------------------------------- //
 #pragma endregion
@@ -778,6 +812,10 @@ void * thread_partie(void * arg) {
         usleep(CONST_GRAVITE_SLEEP_US);  // delai
 
         pthread_mutex_lock(&MUT_TETROMINO);
+
+            #pragma region GRAVITE
+            // --------------------------------------- GRAVITE --------------------------------------- //
+            
 
             tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
@@ -799,6 +837,20 @@ void * thread_partie(void * arg) {
 
                 rot_tetr = 0;
             }
+
+            // --------------------------------------------------------------------------------------- //
+            #pragma endregion
+
+            #pragma region LIGNES COMPLETES
+            // --------------------------------------- LIGNES COMPLETES --------------------------------------- //
+            int lignes_sup = supprimer_lignes();
+            if (lignes_sup > 0) {
+                effacer_grille();
+
+                // TODO: augmenter le score
+            }
+            // ------------------------------------------------------------------------------------------------ //
+            #pragma endregion
 
 
         pthread_mutex_unlock(&MUT_TETROMINO);
