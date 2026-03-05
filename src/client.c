@@ -635,7 +635,7 @@ bool_t collision_grille() {
                 int grille_x = x_tetr + x;
                 int grille_y = y_tetr + y;
 
-                if (grille_x > 0 && grille_x < CONST_LARGEUR_GRILLE  && grille_y > 0 && grille_y < CONST_HAUTEUR_GRILLE) {
+                if (grille_x >= 0 && grille_x < CONST_LARGEUR_GRILLE  && grille_y >= 0 && grille_y < CONST_HAUTEUR_GRILLE) {
                     if (grille[grille_y][grille_x] != 0) return TRUE;
                 } 
             }
