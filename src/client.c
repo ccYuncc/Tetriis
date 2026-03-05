@@ -28,7 +28,7 @@ int BAL_ID;
 // MUTEXS
 pthread_mutex_t MUT_INFO_SERVEUR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_TETROMINO = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t MUT_THREAD_GRAVITE = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t MUT_thread_partie = PTHREAD_MUTEX_INITIALIZER;
 
 // AUTRES
 info_serveur_t serveur; // informations du serveur tetriis
@@ -61,7 +61,7 @@ int x_tetr;
 int y_tetr;
 int rot_tetr;
 
-bool_t  thread_gravite_while;
+bool_t  thread_partie_while;
 
 
 // PROTOTYPES
@@ -78,7 +78,7 @@ bool_t collision_bas();
 bool_t collision_grille();
 bool_t ajouter_tetr_grille();
 
-void * thread_gravite(void * arg);
+void * thread_partie(void * arg);
 
 
 
@@ -259,11 +259,11 @@ int main(){
             if (_premiere_exec) {
                 // code éxecuté la première fois en mode ATTENTE (style qualificatif P1 en automatisme)
 
-                pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+                pthread_mutex_lock(&MUT_thread_partie);
 
-                    thread_gravite_while = FALSE;
+                    thread_partie_while = FALSE;
 
-                pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
+                pthread_mutex_unlock(&MUT_thread_partie);
 
                 affichage_logo(2, 23);
                 
@@ -334,11 +334,11 @@ int main(){
                 
                 _attente_effectuee = FALSE;  // on a fini la partie, on doit repasser par l'attente
 
-                pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+                pthread_mutex_lock(&MUT_thread_partie);
 
-                    thread_gravite_while = FALSE;
+                    thread_partie_while = FALSE;
 
-                pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
+                pthread_mutex_unlock(&MUT_thread_partie);
 
 
                 _premiere_exec = FALSE;
@@ -378,12 +378,12 @@ int main(){
 
                         premier_render();  // pour afficher les éléments statiques du GUI
 
-                        pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+                        pthread_mutex_lock(&MUT_thread_partie);
 
-                            thread_gravite_while = TRUE;  // on "active" le thread qui fait tomber les pièces
+                            thread_partie_while = TRUE;  // on "active" le thread qui fait tomber les pièces
 
-                        pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
-                        pthread_create(&TH_GRAVITE, NULL, thread_gravite, NULL);  // puis une fois la condition activée on crée le thread
+                        pthread_mutex_unlock(&MUT_thread_partie);
+                        pthread_create(&TH_GRAVITE, NULL, thread_partie, NULL);  // puis une fois la condition activée on crée le thread
 
                         
                         _premiere_exec = FALSE;
@@ -766,7 +766,7 @@ void render() {
 
 #pragma region THREAD
 // --------------------------------------- THREAD --------------------------------------- //
-void * thread_gravite(void * arg) {
+void * thread_partie(void * arg) {
     
 
     // TODO: ne pas oublier de le join quand on quitte le mode partie
@@ -808,11 +808,11 @@ void * thread_gravite(void * arg) {
 
 
         // on quitte le thread ?
-        pthread_mutex_lock(&MUT_THREAD_GRAVITE);
+        pthread_mutex_lock(&MUT_thread_partie);
 
-            activ = thread_gravite_while;
+            activ = thread_partie_while;
 
-        pthread_mutex_unlock(&MUT_THREAD_GRAVITE);
+        pthread_mutex_unlock(&MUT_thread_partie);
     }
     
     pthread_exit(0); 
