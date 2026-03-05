@@ -53,6 +53,8 @@ int couleurs_tetrominos[7] = {  // correspond à l'id des paires de couleurs de 
     7, // J : bleu
 };
 
+int grille[CONST_HAUTEUR_GRILLE][CONST_LARGEUR_GRILLE] = {0};
+
 int idx_tetr;
 int idx_proch_tetr;
 int x_tetr;
@@ -73,6 +75,7 @@ int generer_tetr();
 void render();
 bool_t collision_bords();
 bool_t collision_bas();
+bool_t ajouter_tetr_grille();
 
 void * thread_gravite(void * arg);
 
@@ -365,6 +368,8 @@ int main(){
 
                         rot_tetr = 0;
 
+                        memset(grille, 0, sizeof(grille));
+
                         pthread_mutex_unlock(&MUT_TETROMINO);
 
 
@@ -384,31 +389,43 @@ int main(){
                     }
 
                     char touche = getch();
-                    if (touche == 'a') {
+                    if (touche == 'a') {  // gauche
                         pthread_mutex_lock(&MUT_TETROMINO);
+
+                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
                         x_tetr--;
                         if (collision_bords()) {
                             x_tetr ++;
                         }
 
-                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE + 1, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
                         pthread_mutex_unlock(&MUT_TETROMINO);
                     }
-                    else if (touche == 'e') {
+                    else if (touche == 'e') {  // droite
                         pthread_mutex_lock(&MUT_TETROMINO);
                         
+                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+
                         x_tetr++;
                         if (collision_bords()) {
                             x_tetr --;
                         }
-                        
-                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE - 1, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
                        
                         pthread_mutex_unlock(&MUT_TETROMINO);
                     }
-                    
+                    else if (touche == 'z') {  // rotation
+                        pthread_mutex_lock(&MUT_TETROMINO);
+
+                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+                        
+                        rot_tetr = (rot_tetr+1)%4;
+                        if (collision_bords()) {
+                            rot_tetr = (rot_tetr+3)%4;  // +3 plutot que -1 pour évouter le fait que -1%4 donne -1
+                        }
+                       
+                        pthread_mutex_unlock(&MUT_TETROMINO);
+                    }
 
                     // maj de l'affuchage après la logique finie
                     render();
@@ -603,6 +620,32 @@ bool_t collision_bas() {
     return FALSE;
 }
 
+bool_t ajouter_tetr_grille() {
+    int tetr[16];
+    memcpy(tetr, tetrominos[idx_tetr], 16*sizeof(int));
+
+    tetromino_rotation(tetr, rot_tetr);
+
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+
+            if (tetr[y*4+x]) {
+
+                int grille_x = x_tetr + x;
+                int grille_y = y_tetr + y;
+
+                if (grille_x < 0 || grille_x >= CONST_LARGEUR_GRILLE || grille_y < 0 || grille_y >= CONST_HAUTEUR_GRILLE) {
+                    return TRUE;  // en dehors des bords -> impossible de fusionner le tetromino
+                } else {
+                    grille[grille_y][grille_x] = couleurs_tetrominos[idx_tetr];  // on met de la bonne couleur dans la grille
+                }
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 // ------------------------------------------------------------------------------------------------ //
 #pragma endregion
 
@@ -643,7 +686,7 @@ void tetromino_render(int idx_tetromino, int x, int y, int rot) {
     attron(COLOR_PAIR(couleurs_tetrominos[idx_tetromino]));
     for (int _x =0; _x < 4; _x++) {
         for (int _y=0; _y<4; _y++) {
-            if (tetr[_x*4+_y]) {
+            if (tetr[_y*4+_x]) {
                 mvprintw(y+_y,x+_x, "#");
             }
         }
@@ -659,7 +702,7 @@ void tetromino_effacer(int idx_tetromino, int x, int y, int rot) {  // comme tet
 
     for (int _x =0; _x < 4; _x++) {
         for (int _y=0; _y<4; _y++) {
-            if (tetr[_x*4+_y]) {
+            if (tetr[_y*4+_x]) {
                 mvprintw(y+_y,x+_x, " ");
             }
         }
@@ -671,6 +714,16 @@ void render() {
     // pièce actuelle
     tetromino_render(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
+    // pièces figées
+    for (int x =0; x < CONST_LARGEUR_GRILLE; x++) {
+        for (int y=0; y<CONST_HAUTEUR_GRILLE; y++) {
+            if (grille[y][x] != 0) {
+                attron(COLOR_PAIR(grille[y][x]));
+                mvprintw(CONST_Y_OFF_GRILLE+y, CONST_X_OFF_GRILLE+x, "#");
+            }
+        }
+    }
+    attron(COLOR_PAIR(1));
 
     // prochaine pièce (efface puis affiche pour eviter les chevauchements)
     mvprintw(CONST_Y_OFF_GRILLE  , CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
@@ -701,20 +754,26 @@ void * thread_gravite(void * arg) {
 
         pthread_mutex_lock(&MUT_TETROMINO);
 
+            tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
             y_tetr++;  // on descend la piece
 
             if (collision_bas() || FALSE) {  // TODO: check aussi avec les pièces de la grille
                 y_tetr--;
 
-                // TODO: figer la pièce dans la grille
-                // TODO: check si problème au figeage -> perdu !
-                // TODO: basculer sur la nouvelle pièce
-                // TODO: regénérer la pièce suivante
-                // TODO: reset la position du tetrmonio en haut de la grille
-            }
+                if (ajouter_tetr_grille()) {
+                    // TODO: FIN DE PARTIE -> PERDU !!!!
+                };
 
-            tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE-1, rot_tetr);
+                // reset pièce
+                x_tetr = CONST_LARGEUR_GRILLE / 2 - 2;
+                y_tetr = -4;
+
+                idx_tetr = idx_proch_tetr;
+                idx_proch_tetr = generer_tetr();
+
+                rot_tetr = 0;
+            }
 
 
         pthread_mutex_unlock(&MUT_TETROMINO);
