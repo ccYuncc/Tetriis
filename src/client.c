@@ -55,11 +55,15 @@ int couleurs_tetrominos[7] = {  // correspond à l'id des paires de couleurs de 
 
 int grille[CONST_HAUTEUR_GRILLE][CONST_LARGEUR_GRILLE] = {0};
 
+// protegee par mutex
 int idx_tetr;
 int idx_proch_tetr;
 int x_tetr;
 int y_tetr;
 int rot_tetr;
+
+int sup_consecutives = 0;
+// ------------------
 
 bool_t  thread_partie_while;
 
@@ -847,7 +851,21 @@ void * thread_partie(void * arg) {
             if (lignes_sup > 0) {
                 effacer_grille();
 
+                sup_consecutives += lignes_sup;
+
                 // TODO: augmenter le score
+            } else {
+                
+                if (sup_consecutives >= CONST_MIN_POUR_BONUS) {  // on vient d'arrêter de supprimer des lignes
+                        msg_game_player_t msg_game_player;
+                        msg_game_player.type = MSG_TYPE_GAME;
+                        msg_game_player.pid_joueur = joueur.pid_client;
+                        msg_game_player.type_msg = GAME_MSG_LINE;
+
+                        msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
+                }
+                
+                sup_consecutives = 0;
             }
             // ------------------------------------------------------------------------------------------------ //
             #pragma endregion

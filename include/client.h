@@ -26,4 +26,6 @@
 
 #define CONST_GRAVITE_SLEEP_US 500 * 1000 // 500ms
 
+#define CONST_MIN_POUR_BONUS 2 // il faut 2 suppressions simultanées pour uenvoyer un malus au autres
+
 #endif  // CLIENT_H
