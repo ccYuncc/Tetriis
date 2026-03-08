@@ -78,6 +78,7 @@ void tetromino_rotation(int tetromino[16], int rot);
 void effacer_grille();
 int generer_tetr();
 void render();
+void bordures_render();
 bool_t collision_bords();
 bool_t collision_bas();
 bool_t collision_grille();
@@ -711,17 +712,7 @@ int supprimer_lignes() {
 
 void premier_render() {
     // affichage du plateau
-    int x_off = CONST_X_OFF_GRILLE; 
-    int y_off = CONST_Y_OFF_GRILLE;
-    for (int y=0; y<CONST_HAUTEUR_GRILLE; y++) {
-        mvprintw(y_off+y, x_off-1, "|");
-        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE, "|");
-    }
-    for (int x=0; x<CONST_LARGEUR_GRILLE; x++) {
-        mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+x, "=");
-    }
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off-1, "+");
-    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+CONST_LARGEUR_GRILLE, "+");
+    bordures_render();
 
     mvprintw(CONST_Y_OFF_GRILLE-1, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "Next :");
 
@@ -797,6 +788,20 @@ void effacer_grille() {
     }
 }
 
+void bordures_render() {
+    int x_off = CONST_X_OFF_GRILLE; 
+    int y_off = CONST_Y_OFF_GRILLE;
+    for (int y=0; y<CONST_HAUTEUR_GRILLE; y++) {
+        mvprintw(y_off+y, x_off-1, "|");
+        mvprintw(y_off+y, x_off+CONST_LARGEUR_GRILLE, "|");
+    }
+    for (int x=0; x<CONST_LARGEUR_GRILLE; x++) {
+        mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+x, "=");
+    }
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off-1, "+");
+    mvprintw(y_off+CONST_HAUTEUR_GRILLE, x_off+CONST_LARGEUR_GRILLE, "+");
+}
+
 
 // ----------------------------------------------------------------------------------------- //
 #pragma endregion
@@ -822,6 +827,7 @@ void * thread_partie(void * arg) {
             
 
             tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+            bordures_render();
 
             y_tetr++;  // on descend la piece
 
