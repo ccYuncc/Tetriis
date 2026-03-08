@@ -835,6 +835,14 @@ void * thread_partie(void * arg) {
                 y_tetr--;
 
                 if (ajouter_tetr_grille()) {
+
+                    msg_game_player_t msg_game_player;
+                    msg_game_player.type = MSG_TYPE_GAME;
+                    msg_game_player.pid_joueur = joueur.pid_client;
+                    msg_game_player.type_msg = GAME_MSG_DEATH;
+
+                    msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
+
                     // TODO: FIN DE PARTIE -> PERDU !!!!
                 };
 
