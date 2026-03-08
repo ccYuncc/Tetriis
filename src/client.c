@@ -245,6 +245,7 @@ int main(){
     
     bool_t ready = FALSE;  // joueur prêt ou non dans le lobby ?
 
+    srand(joueur.pid_client);  // pour que chaque joueur ait des pièces différentes, on utilise leurs PID (unique) pour avoir une seed pour rand
 
     // --------------------------------------- BOUCLE PRINCIPALE --------------------------------------- //
 
