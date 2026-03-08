@@ -171,6 +171,7 @@ int main(){
     #pragma region CONNEXION
     // --------------------------------------- CONNEXION --------------------------------------- //
 
+        joueur.fermer = FALSE;  // on veut ouvrir une connexion
 
         // ACQUISITION DU PSEUDO
         printf("CLIENT] Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
@@ -918,7 +919,19 @@ void deroute(int signal){
         case SIGINT : 
             endwin(); 
             printf("CLIENT] SIGINT, fermeture du client\n"); 
+
+
+
+            // déconnexion par rapport au serveur
+            joueur.fermer = TRUE;  // on veut quitter le serveur car le client se ferme
+            msg_login_t msg_login;
+            msg_login.type = MSG_TYPE_LOGIN;
+            msg_login.msg = joueur;
             
+            msgsnd(BAL_ID, &msg_login, MSG_SIZEOF(msg_login_t), 0);  // envoi dans la BAL
+            
+
+
             sem_close(SEM_INFO_SERVEUR); 
             sem_close(SEM_SCORE);
             exit(EXIT_SUCCESS);  

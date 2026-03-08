@@ -94,6 +94,7 @@ typedef struct {
 typedef struct {
     pid_t pid_client; 
     char pseudo[CONST_LONGUEUR_PSEUDO];
+    bool_t fermer;  // 0 -> demande de connexion // 1 -> demande de déconnexion
 } login_t; 
 
 typedef struct{
