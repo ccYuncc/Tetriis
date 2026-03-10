@@ -752,7 +752,7 @@ void affichage_attente(){
     affichage_logo(2, ((cols-34)/2)); 
     mvprintw(7, ((cols-15)/2), "Waiting room..."); 
     mvprintw(8, ((cols-32)/2), "Welcome to the game : Tetriis !!"); 
-    mvprintw(10, ((cols-34)/2), "Use"); 
+    mvprintw(10, ((cols-34)/2), "Use "); 
     attron(A_BOLD);
     printw("[ENTER]");
     attroff(A_BOLD); 
