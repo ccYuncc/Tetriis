@@ -114,3 +114,48 @@ void affichage_lancement(){
     
     refresh();
 }
+
+void affichage_podium(score_t * info_score){
+    int rows, cols; 
+    getmaxyx(stdscr, rows, cols); 
+
+    clear(); 
+    affichage_logo(2, ((cols-34)/2)); 
+    mvprintw(7, ((cols-26)/2), "We hope you enjoy the game"); 
+
+    attron(A_BOLD);
+    mvprintw((rows/2)-3, ((cols-7)/2), "Results");
+    attroff(A_BOLD);
+
+
+    for(int i = 0; i < 5 ; i++){
+        attron(COLOR_PAIR(9));
+        mvprintw((rows/2)+4+i, (cols/6)-8, "________");  
+        mvprintw((rows/2)+4+i, (4*cols/6)-8, "________"); 
+    }
+
+    for(int i = 0; i < 7; i++){
+        attron(COLOR_PAIR(8));
+        mvprintw((rows/2)+2+i, (cols/6), "________"); 
+        mvprintw((rows/2)+2+i, (4*cols/6), "________"); 
+    }
+
+    for(int i = 0; i < 4; i++){
+        attron(COLOR_PAIR(10));
+        mvprintw((rows/2)+5+i, (cols/6)+8, "________");  
+        mvprintw((rows/2)+5+i, (4*cols/6)+8, "________"); 
+    }
+
+    attron(COLOR_PAIR(1));
+
+    mvprintw((rows/2)+3, (cols/6)-7, "%s", info_score->last_survivors[1]); 
+    mvprintw((rows/2)+1, (cols/6)+1, "%s", info_score->last_survivors[0]); 
+    mvprintw((rows/2)+4, (cols/6)+9, "%s", info_score->last_survivors[2]); 
+
+    mvprintw((rows/2)+3, (4*cols/6)-7, "%s", info_score->deuxieme.login_joueur.pseudo); 
+    mvprintw((rows/2)+3, (4*cols/6)+1, "%s", info_score->deuxieme.login_joueur.pseudo); 
+    mvprintw((rows/2)+3, (4*cols/6)+9, "%s", info_score->deuxieme.login_joueur.pseudo); 
+
+    mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+    refresh(); 
+}

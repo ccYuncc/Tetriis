@@ -379,50 +379,13 @@ int main(){
             changement_etat_serveur(PODIUM);  
             do
             {
-                getmaxyx(stdscr, rows, cols); 
-
-                clear(); 
-                affichage_logo(2, ((cols-34)/2)); 
-                mvprintw(7, ((cols-26)/2), "We hope you enjoy the game"); 
-
-                attron(A_BOLD);
-                mvprintw((rows/2)-3, ((cols-7)/2), "Results");
-                attroff(A_BOLD);
-
-
-                for(int i = 0; i < 5 ; i++){
-                    attron(COLOR_PAIR(9));
-                    mvprintw((rows/2)+4+i, (cols/6)-8, "________");  
-                    mvprintw((rows/2)+4+i, (4*cols/6)-8, "________"); 
-                }
-
-                for(int i = 0; i < 7; i++){
-                    attron(COLOR_PAIR(8));
-                    mvprintw((rows/2)+2+i, (cols/6), "________"); 
-                    mvprintw((rows/2)+2+i, (4*cols/6), "________"); 
-                }
-
-                for(int i = 0; i < 4; i++){
-                    attron(COLOR_PAIR(10));
-                    mvprintw((rows/2)+5+i, (cols/6)+8, "________");  
-                    mvprintw((rows/2)+5+i, (4*cols/6)+8, "________"); 
-                }
-
-                attron(COLOR_PAIR(1));
-
                 pthread_mutex_lock(&MUT_SCORE); 
                             
                     sem_wait(SEM_SCORE); 
                 
                         info_score = shmat(SHM_SCORE, NULL, 0); 
                         
-                        mvprintw((rows/2)+3, (cols/6)-7, "%s", info_score->last_survivors[1]); 
-                        mvprintw((rows/2)+1, (cols/6)+1, "%s", info_score->last_survivors[0]); 
-                        mvprintw((rows/2)+4, (cols/6)+9, "%s", info_score->last_survivors[2]); 
-
-                        mvprintw((rows/2)+3, (4*cols/6)-7, "%s", info_score->deuxieme.login_joueur.pseudo); 
-                        mvprintw((rows/2)+3, (4*cols/6)+1, "%s", info_score->deuxieme.login_joueur.pseudo); 
-                        mvprintw((rows/2)+3, (4*cols/6)+9, "%s", info_score->deuxieme.login_joueur.pseudo); 
+                        affichage_podium(info_score); 
 
 
                         shmdt(info_score); 
@@ -430,9 +393,6 @@ int main(){
                     sem_post(SEM_SCORE); 
 
                 pthread_mutex_unlock(&MUT_SCORE); 
-
-                mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
-                refresh(); 
                 usleep(500000); // 50ms
             } while (1);
 
@@ -474,29 +434,47 @@ int main(){
             pid_t pid_client = msg_login.msg.pid_client;
             char pseudo[CONST_LONGUEUR_PSEUDO]; 
             strcpy(pseudo, msg_login.msg.pseudo); 
+            bool_t ferme = msg_login.msg.fermer;
             
             //printf("SERVEUR ] Un joueur essaye de se connecter : \n"); 
             //printf("SERVEUR ] Voici les données enregistrées : PSEUDO : %s || PID : %d \n", pseudo, pid_client); 
 
             reponse_serveur.type = pid_client;
+ 
+            switch(ferme){
+                case 0 : 
+                    pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+                    if (joueurs_enregistre.nb_joueurs < CONST_NOMBRE_JOUEURS){
+                        joueurs_enregistre.liste_joueurs[joueurs_enregistre.nb_joueurs].pid_client = pid_client;
+                        strcpy(joueurs_enregistre.liste_joueurs[joueurs_enregistre.nb_joueurs].pseudo, pseudo); 
+                        joueurs_enregistre.nb_joueurs++; 
+                        
+                        strcpy(reponse_serveur.msg, CONST_LOGIN_OK); 
 
-            pthread_mutex_lock(&MUT_LISTE_JOUEURS);  
+                        //printf("\n\nDEBUG ] SERVEUR ] NOUVELLE LISTE DE JOUEURS :\n"); 
+                        //affichage_liste_joueurs(); 
+                    }else{
+                        strcpy(reponse_serveur.msg, CONST_LOGIN_ECHEC); 
+                        //printf("\n\nDEBUG ] SERVEUR ] TROP DE JOUEURS DEJA CONNECTE\n"); 
+                    }
+                    pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+                    break; 
+                case 1 : 
+                    int index = find_index_player(pid_client); 
+                    if(index != -1){
+                        pthread_mutex_lock(&MUT_LISTE_JOUEURS);
 
-            if (joueurs_enregistre.nb_joueurs < CONST_NOMBRE_JOUEURS){
-                joueurs_enregistre.liste_joueurs[joueurs_enregistre.nb_joueurs].pid_client = pid_client;
-                strcpy(joueurs_enregistre.liste_joueurs[joueurs_enregistre.nb_joueurs].pseudo, pseudo); 
-                joueurs_enregistre.nb_joueurs++; 
-                
-                strcpy(reponse_serveur.msg, CONST_LOGIN_OK); 
+                        for(int i = index; i < joueurs_enregistre.nb_joueurs; i++){
+                            joueurs_enregistre.liste_joueurs[i] = joueurs_enregistre.liste_joueurs[i+1]; 
+                        }
+                        joueurs_enregistre.nb_joueurs--; 
 
-                //printf("\n\nDEBUG ] SERVEUR ] NOUVELLE LISTE DE JOUEURS :\n"); 
-                //affichage_liste_joueurs(); 
-            }else{
-                strcpy(reponse_serveur.msg, CONST_LOGIN_ECHEC); 
-                //printf("\n\nDEBUG ] SERVEUR ] TROP DE JOUEURS DEJA CONNECTE\n"); 
-            }
-
-            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+                        pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+                    }
+                    break; 
+                default : 
+                    break; 
+            } 
 
             msgsnd(BAL_ID, &reponse_serveur, MSG_SIZEOF(msg_reponse_serveur_t), 0);
             

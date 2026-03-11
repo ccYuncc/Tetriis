@@ -29,6 +29,7 @@ int BAL_ID;
 pthread_mutex_t MUT_INFO_SERVEUR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_TETROMINO = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_thread_partie = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t MUT_SCORE = PTHREAD_MUTEX_INITIALIZER; 
 
 // AUTRES
 info_serveur_t serveur; // informations du serveur tetriis
@@ -101,6 +102,7 @@ int main(){
     #endif  // MODE_TEST
 
     pthread_t TH_GRAVITE;
+    score_t * info_score; 
 
     // OUVERTURE DES SEMAPHORES
     SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR, 0); 
@@ -348,6 +350,26 @@ int main(){
                     thread_partie_while = FALSE;
 
                 pthread_mutex_unlock(&MUT_thread_partie);
+
+
+                do
+                {
+                    pthread_mutex_lock(&MUT_SCORE); 
+                                
+                        sem_wait(SEM_SCORE); 
+                    
+                            info_score = shmat(SHM_SCORE, NULL, 0); 
+                            
+                            affichage_podium(info_score); 
+
+
+                            shmdt(info_score); 
+                            
+                        sem_post(SEM_SCORE); 
+
+                    pthread_mutex_unlock(&MUT_SCORE); 
+                    usleep(500000); // 50ms
+                } while (1);
 
 
                 _premiere_exec = FALSE;

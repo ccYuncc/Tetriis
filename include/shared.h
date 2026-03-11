@@ -149,5 +149,6 @@ void affichage_logo(int y, int x);
 void init_ncurses();  
 void affichage_compteur(int compteur, int points);
 void affichage_lancement();
+void affichage_podium(score_t * info_score); 
 
 #endif  // SHARED_H
