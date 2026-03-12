@@ -73,6 +73,7 @@
 #define GAME_MSG_MALUS 3
 
 #define SIG_START 10 // SIGUSR1
+#define SIG_END 12 //  SIGUSR2
 
 
 #define CHECK(sts,msg)      if ((sts) == -1 )  { perror(msg);exit(-1);}

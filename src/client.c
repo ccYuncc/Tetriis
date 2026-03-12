@@ -153,6 +153,7 @@ int main(int argc, char **argv){
     newact.sa_handler = deroute;
     CHECK(sigaction(SIGINT, &newact, NULL), "Problème sigaction");
     CHECK(sigaction(SIG_START, &newact, NULL), "Problème sigaction");
+    CHECK(sigaction(SIG_END, &newact, NULL), "Problème sigaction");
 
     // --------------------------------------------------------------------------------------- //
     #pragma endregion
@@ -1005,6 +1006,15 @@ void deroute(int signal){
 
 
             break; 
+
+        case SIG_END : 
+            // SIG_END -> le serveur nous signale de passer de partie à podium
+            clear(); 
+            refresh(); 
+            maj_info_serveur(); 
+
+            break; 
+
         default :  
             printf("Commande inconnue"); 
             break; 

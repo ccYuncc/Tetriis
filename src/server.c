@@ -78,6 +78,7 @@ int main(){
     // --------------------------------------- INIT --------------------------------------- //
     int nbJoueurs; 
     int rows, cols; 
+    int timer; 
     
     pthread_t TH_CONNEXION; 
     pthread_t TH_ECOUTE;  
@@ -176,7 +177,9 @@ int main(){
     // --------------------------------------- JEU --------------------------------------- //
         #pragma region REINIT 
         // REINITIALISATION DES DONNEES APRES UNE PARTIE 
+        timer = 0; 
         init_ncurses(); 
+        nodelay(stdscr, TRUE);   // getch devient non bloquant
 
         pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
         close_ecoute = FALSE;
@@ -284,10 +287,15 @@ int main(){
                 nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
                 pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
-                mvprintw(12, ((cols-30)/2), "Nombre de joueurs en vie : %d/%d", check_end_game(), nbJoueurs); 
+                mvprintw(9, ((cols-25)/2), "Higher score : [Score] by [Pseudo]"); 
+                mvprintw(11, ((cols-30)/2), "Number of players alive : %d/%d", check_end_game(), nbJoueurs); 
+                mvprintw(13, ((cols-10)/2), "Time : %d s", timer); 
+                timer++; 
 
                 switch(last_event.event){
-                    case 1 : //  MORT D'UN JOUEUR 
+                    case 1 :
+                        // 1 -> DERNIER EVENT : MORT d'UN JOUEUR
+
                         attron(A_BOLD);
                         attron(COLOR_PAIR(3));
                         pthread_mutex_lock(&MUT_EVENT); 
@@ -295,12 +303,14 @@ int main(){
                         pthread_mutex_unlock(&MUT_EVENT); 
                         attron(COLOR_PAIR(1));
                         attroff(A_BOLD);
-                        printw(" est mort...");
+                        printw(" is dead...");
                         refresh(); 
 
                         break; 
 
-                    case 2 : //  BONUS/MALUS D'UN JOUEUR
+                    case 2 : 
+                        // 2 -> DERNIER EVENT : BONUS/MALUS D'UN JOUEUR
+
                         // AFFICHAGE MALUS
                         // AFFICHAGE MORT SUR LE SERVEUR
                         pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
@@ -311,7 +321,7 @@ int main(){
                         pthread_mutex_unlock(&MUT_EVENT); 
                         attron(COLOR_PAIR(1));
                         attroff(A_BOLD);
-                        printw(" a donne un jolie cadeau a tout le monde !");
+                        printw(" gave everyone a lovely gift!");
                         pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
                         refresh(); 
 
@@ -358,6 +368,13 @@ int main(){
                 sem_post(SEM_SCORE); 
 
             pthread_mutex_unlock(&MUT_SCORE); 
+
+            // SIGNAL DE FIN DE PARTIE
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+            for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
+                kill(joueurs_enregistre.liste_joueurs[i].pid_client, SIG_END); 
+            }
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
 
             
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
@@ -727,17 +744,29 @@ void affichage_attente(){
     getmaxyx(stdscr, rows, cols); 
 
     clear(); 
+    // Message HEADER
     affichage_logo(2, ((cols-34)/2)); 
     mvprintw(7, ((cols-15)/2), "Waiting room..."); 
     mvprintw(8, ((cols-32)/2), "Welcome to the game : Tetriis !!"); 
+    
+    // Affichage du message ENTRER
     mvprintw(10, ((cols-34)/2), "Use "); 
     attron(A_BOLD);
     printw("[ENTER]");
     attroff(A_BOLD); 
     printw(" to be ready / not ready"); 
+    
+    // Affichage du message ESCAPE
+    mvprintw(11, ((cols-34)/2), "Use "); 
+    attron(A_BOLD); 
+    printw("[ESCAPE]"); 
+    attroff(A_BOLD); 
+    printw(" to run away"); 
 
+
+    // Affichage des informations dynamiques
     pthread_mutex_lock(&MUT_LISTE_JOUEURS);
-    nbJoueurs = joueurs_enregistre.nb_joueurs; 
+        nbJoueurs = joueurs_enregistre.nb_joueurs; 
     pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
     
@@ -752,27 +781,33 @@ void affichage_attente(){
 
     if(nbJoueurs > 0){
         pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-        pthread_mutex_lock(&MUT_ETAT_JOUEURS); 
-            for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
-                index_joueurs = find_index_player(joueurs_enregistre.liste_joueurs[i].pid_client); 
-                
-                if(etat_joueurs[index_joueurs] == TRUE){
-                    attron(COLOR_PAIR(2)); //  Joueur prêt VERT
-                }else{
-                    attron(COLOR_PAIR(3)); //  Joueur pas prêt ROUGE
+            pthread_mutex_lock(&MUT_ETAT_JOUEURS); 
+                for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
+                    index_joueurs = find_index_player(joueurs_enregistre.liste_joueurs[i].pid_client); 
+                    
+                    if(etat_joueurs[index_joueurs] == TRUE){
+                        attron(COLOR_PAIR(2)); //  Joueur prêt VERT
+                    }else{
+                        attron(COLOR_PAIR(3)); //  Joueur pas prêt ROUGE
+                    }
+
+                    mvprintw(15+(i/3), (cols/6)+((i%3)*CONST_LONGUEUR_PSEUDO), "<  %s  >", joueurs_enregistre.liste_joueurs[i].pseudo); 
+
+                    attron(COLOR_PAIR(1));
                 }
 
-                mvprintw(15+(i/3), (cols/6)+((i%3)*CONST_LONGUEUR_PSEUDO), "<  %s  >", joueurs_enregistre.liste_joueurs[i].pseudo); 
-
-                attron(COLOR_PAIR(1));
-            }
-
-        pthread_mutex_unlock(&MUT_ETAT_JOUEURS); 
+            pthread_mutex_unlock(&MUT_ETAT_JOUEURS); 
         pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
     }
 
+    // Message BOTTOM
+    mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas");
     
-    mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+    char touche = getch();  // récupération de l'input
+
+    if (touche == 27) {  // touche entrée activée, on toggle le fait d'être prêt
+        kill(getpid(), SIGINT); 
+    }
 
     refresh(); 
 }
@@ -781,21 +816,81 @@ void affichage_attente(){
 // ------------------------------------------------------------------------------------ //
 #pragma endregion
 
-#pragma region FONCTION AFFICHAGE
-// --------------------------------------- FONCTION AFFICHAGE --------------------------------------- //
-void affichage_liste_joueur_etat(){
-    pthread_mutex_lock(&MUT_LISTE_JOUEURS);
-    for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
-        printf("SERVEUR ] %s : %d", joueurs_enregistre.liste_joueurs[i].pseudo, etat_joueurs[i]); 
+
+
+
+
+
+
+#pragma region FONCTION DEROUTE
+// --------------------------------------- FONCTION DEROUTE --------------------------------------- //
+
+void deroute(int signal){
+
+
+    switch(signal){
+
+        case SIGINT : 
+            // SIGINT -> Signal de fermeture du serveur
+            printf("Fermeture des joueurs et du serveur \n"); 
+            
+            for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
+                kill(joueurs_enregistre.liste_joueurs[i].pid_client, SIGINT); 
+            }
+            close_shm_sem(); 
+            endwin();
+            exit(EXIT_SUCCESS);  
+            break; 
+
+
+        default :  
+            printf("Commande inconnue"); 
+            break; 
     }
+}
+
+void close_shm_sem(){
+    // Fermeture des SHM
+    shmctl(SHM_INFO_SERVEUR, IPC_RMID, NULL);  // suppr
+    shmctl(SHM_SCORE, IPC_RMID, NULL);  // suppr
+
+    // Fermeture des sémaphores 
+    sem_close(SEM_INFO_SERVEUR); 
+    sem_close(SEM_SCORE); 
+
+    sem_unlink(CONST_SEM_NOM_INFO_SERVEUR); 
+    sem_unlink(CONST_SEM_NOM_SCORE); 
+}
+
+// ------------------------------------------------------------------------------------ //
+#pragma endregion 
+
+
+
+
+
+
+
+#pragma region FONCTION AFFICHAGE
+// --------------------------------------- FONCTION DEBUG AFFICHAGE --------------------------------------- //
+void affichage_liste_joueur_etat(){
+
+    pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+
+        for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
+            printf("SERVEUR ] %s : %d", joueurs_enregistre.liste_joueurs[i].pseudo, etat_joueurs[i]); 
+        }
+
     pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
 }
 
 
 void affichage_liste_joueurs(){
+    
     for(int i = 0 ; i < joueurs_enregistre.nb_joueurs; i++){
         printf("DEBUG ] SERVEUR ] %d ] %d => %s\n", i, joueurs_enregistre.liste_joueurs[i].pid_client, joueurs_enregistre.liste_joueurs[i].pseudo); 
     }
+
     printf("\n"); 
 }
 
@@ -846,40 +941,3 @@ void affichage_serveur() {
 }
 // ------------------------------------------------------------------------------------ //
 #pragma endregion
-
-#pragma region FONCTION DEROUTE
-// --------------------------------------- FONCTION DEROUTE --------------------------------------- //
-
-void deroute(int signal){
-    switch(signal){
-        case SIGINT : 
-            printf("Fermeture des joueurs et du serveur \n"); 
-            
-            for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
-                kill(joueurs_enregistre.liste_joueurs[i].pid_client, SIGINT); 
-            }
-            close_shm_sem(); 
-            endwin();
-            exit(EXIT_SUCCESS);  
-            break; 
-        default :  
-            printf("Commande inconnue"); 
-            break; 
-    }
-}
-
-void close_shm_sem(){
-    // Fermeture des SHM
-    shmctl(SHM_INFO_SERVEUR, IPC_RMID, NULL);  // suppr
-    shmctl(SHM_SCORE, IPC_RMID, NULL);  // suppr
-
-    // Fermeture des sémaphores 
-    sem_close(SEM_INFO_SERVEUR); 
-    sem_close(SEM_SCORE); 
-
-    sem_unlink(CONST_SEM_NOM_INFO_SERVEUR); 
-    sem_unlink(CONST_SEM_NOM_SCORE); 
-}
-
-// ------------------------------------------------------------------------------------ //
-#pragma endregion 
