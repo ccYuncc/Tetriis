@@ -180,6 +180,12 @@ int main(){
         fgets(joueur.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
         joueur.pseudo[strlen(joueur.pseudo)-1] = '\0';
 
+        while (strcmp(joueur.pseudo, "") == 0) {
+            printf("CLIENT] Veuillez rentrer un pseudo... Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
+            fgets(joueur.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
+            joueur.pseudo[strlen(joueur.pseudo)-1] = '\0';
+        }
+
         // ACQUISITION DU PID
         joueur.pid_client = getpid();
         printf("CLIENT] PID du client : %d\n", joueur.pid_client);
