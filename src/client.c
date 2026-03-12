@@ -28,7 +28,7 @@ int BAL_ID;
 // MUTEXS
 pthread_mutex_t MUT_INFO_SERVEUR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_TETROMINO = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t MUT_thread_partie = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t MUT_THREAD_PATIE = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_SCORE = PTHREAD_MUTEX_INITIALIZER; 
 
 // AUTRES
@@ -90,7 +90,7 @@ void * thread_partie(void * arg);
 
 
 
-int main(){
+int main(int argc, char **argv){
 
     #pragma region INIT
     // --------------------------------------- INIT --------------------------------------- //
@@ -176,14 +176,21 @@ int main(){
         joueur.fermer = FALSE;  // on veut ouvrir une connexion
 
         // ACQUISITION DU PSEUDO
-        printf("CLIENT] Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
-        fgets(joueur.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
-        joueur.pseudo[strlen(joueur.pseudo)-1] = '\0';
 
-        while (strcmp(joueur.pseudo, "") == 0) {
-            printf("CLIENT] Veuillez rentrer un pseudo... Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
+        if (argc >= 2) {  // lancé avec ./bin/client.exe pseudo
+
+            strncpy(joueur.pseudo, argv[1], CONST_LONGUEUR_PSEUDO);
+
+        } else {  // lancé avec ./bin/client.exe
+            printf("CLIENT] Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
             fgets(joueur.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
             joueur.pseudo[strlen(joueur.pseudo)-1] = '\0';
+
+            while (strcmp(joueur.pseudo, "") == 0) {
+                printf("CLIENT] Veuillez rentrer un pseudo... Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
+                fgets(joueur.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
+                joueur.pseudo[strlen(joueur.pseudo)-1] = '\0';
+            }
         }
 
         // ACQUISITION DU PID
@@ -252,6 +259,7 @@ int main(){
     etat_serveur_t etat;  // etat du serveur stocké en dehors de la variable globale pour pas avoir besoin de mutex lock/unlock
     
     bool_t ready = FALSE;  // joueur prêt ou non dans le lobby ?
+    bool_t mort = FALSE;  // le joueur a perdu mais la partie n'est pas finie
 
     srand(joueur.pid_client);  // pour que chaque joueur ait des pièces différentes, on utilise leurs PID (unique) pour avoir une seed pour rand
 
@@ -276,11 +284,11 @@ int main(){
             if (_premiere_exec) {
                 // code éxecuté la première fois en mode ATTENTE (style qualificatif P1 en automatisme)
 
-                pthread_mutex_lock(&MUT_thread_partie);
+                pthread_mutex_lock(&MUT_THREAD_PATIE);
 
                     thread_partie_while = FALSE;
 
-                pthread_mutex_unlock(&MUT_thread_partie);
+                pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
                 affichage_logo(2, 23);
                 
@@ -351,11 +359,11 @@ int main(){
                 
                 _attente_effectuee = FALSE;  // on a fini la partie, on doit repasser par l'attente
 
-                pthread_mutex_lock(&MUT_thread_partie);
+                pthread_mutex_lock(&MUT_THREAD_PATIE);
 
                     thread_partie_while = FALSE;
 
-                pthread_mutex_unlock(&MUT_thread_partie);
+                pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
 
                 do
@@ -415,16 +423,22 @@ int main(){
 
                         premier_render();  // pour afficher les éléments statiques du GUI
 
-                        pthread_mutex_lock(&MUT_thread_partie);
+                        pthread_mutex_lock(&MUT_THREAD_PATIE);
 
                             thread_partie_while = TRUE;  // on "active" le thread qui fait tomber les pièces
 
-                        pthread_mutex_unlock(&MUT_thread_partie);
+                        pthread_mutex_unlock(&MUT_THREAD_PATIE);
                         pthread_create(&TH_GRAVITE, NULL, thread_partie, NULL);  // puis une fois la condition activée on crée le thread
+                        pthread_detach(TH_GRAVITE);  // on le détache pour ne pas avoir à join le thread pour qu'il libère ses resources
+
+
+                        mort = FALSE;
 
                         
                         _premiere_exec = FALSE;
                     }
+
+                    // TODO: briser le getch() si on est "mort" pour afficher l'état d'attente...
 
                     char touche = getch();
                     if (touche == 'a') {  // gauche
@@ -840,9 +854,6 @@ void bordures_render() {
 #pragma region THREAD
 // --------------------------------------- THREAD --------------------------------------- //
 void * thread_partie(void * arg) {
-    
-
-    // TODO: ne pas oublier de le join quand on quitte le mode partie
 
     bool_t activ = TRUE;
 
@@ -864,7 +875,7 @@ void * thread_partie(void * arg) {
             if (collision_bas() || collision_grille()) {
                 y_tetr--;
 
-                if (ajouter_tetr_grille()) {
+                if (ajouter_tetr_grille()) {  // ajout impossible
 
                     msg_game_player_t msg_game_player;
                     msg_game_player.type = MSG_TYPE_GAME;
@@ -874,16 +885,23 @@ void * thread_partie(void * arg) {
                     msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
 
                     // TODO: FIN DE PARTIE -> PERDU !!!!
-                };
+                    pthread_mutex_lock(&MUT_THREAD_PATIE);
 
-                // reset pièce
-                x_tetr = CONST_LARGEUR_GRILLE / 2 - 2;
-                y_tetr = -4;
+                    thread_partie_while = FALSE;
+                    activ = thread_partie_while;
 
-                idx_tetr = idx_proch_tetr;
-                idx_proch_tetr = generer_tetr();
+                    pthread_mutex_unlock(&MUT_THREAD_PATIE);
+                } else {  // ajout possible
 
-                rot_tetr = 0;
+                    // reset pièce
+                    x_tetr = CONST_LARGEUR_GRILLE / 2 - 2;
+                    y_tetr = -4;
+
+                    idx_tetr = idx_proch_tetr;
+                    idx_proch_tetr = generer_tetr();
+
+                    rot_tetr = 0;
+                }
             }
 
             // --------------------------------------------------------------------------------------- //
@@ -922,11 +940,11 @@ void * thread_partie(void * arg) {
 
 
         // on quitte le thread ?
-        pthread_mutex_lock(&MUT_thread_partie);
+        pthread_mutex_lock(&MUT_THREAD_PATIE);
 
             activ = thread_partie_while;
 
-        pthread_mutex_unlock(&MUT_thread_partie);
+        pthread_mutex_unlock(&MUT_THREAD_PATIE);
     }
     
     pthread_exit(0); 
