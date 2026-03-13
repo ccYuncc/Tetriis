@@ -29,6 +29,7 @@ int BAL_ID;
 pthread_mutex_t MUT_INFO_SERVEUR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_TETROMINO = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_THREAD_PATIE = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t MUT_NCURSES = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_SCORE = PTHREAD_MUTEX_INITIALIZER; 
 
 // AUTRES
@@ -241,7 +242,11 @@ int main(int argc, char **argv){
     #pragma region CONFIGURATION NCURSES
     // --------------------------------------- CONFIGURATION NCURSES --------------------------------------- //
 
-    init_ncurses();
+    pthread_mutex_lock(&MUT_NCURSES);
+
+        init_ncurses();
+
+    pthread_mutex_unlock(&MUT_NCURSES);
 
     // ----------------------------------------------------------------------------------------------------- //
     #pragma endregion
@@ -291,26 +296,30 @@ int main(int argc, char **argv){
 
                 pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
-                affichage_logo(2, 23);
-                
-                mvprintw(7, 13, "Waiting room..."); 
-                mvprintw(8, 13, "Welcome ");
-                attron(COLOR_PAIR(2));
-                printw("%s", joueur.pseudo);
-                attron(COLOR_PAIR(1));
-                printw(" to the game : Tetriis !!");
-                mvprintw(10, 13, "Use ");
-                attron(A_BOLD);
-                printw("[ENTER]");
-                attroff(A_BOLD);
-                printw(" to be ready or not"); 
-                mvprintw(11, 13, "Ready : ");
-                attron(COLOR_PAIR(3));
-                printw("NO ");
-                attron(COLOR_PAIR(1));
-                mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+                pthread_mutex_lock(&MUT_NCURSES);
 
-                refresh();
+                    affichage_logo(2, 23);
+                    
+                    mvprintw(7, 13, "Waiting room..."); 
+                    mvprintw(8, 13, "Welcome ");
+                    attron(COLOR_PAIR(2));
+                    printw("%s", joueur.pseudo);
+                    attron(COLOR_PAIR(1));
+                    printw(" to the game : Tetriis !!");
+                    mvprintw(10, 13, "Use ");
+                    attron(A_BOLD);
+                    printw("[ENTER]");
+                    attroff(A_BOLD);
+                    printw(" to be ready or not"); 
+                    mvprintw(11, 13, "Ready : ");
+                    attron(COLOR_PAIR(3));
+                    printw("NO ");
+                    attron(COLOR_PAIR(1));
+                    mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+
+                    refresh();
+
+                pthread_mutex_unlock(&MUT_NCURSES);
 
 
                 ready = FALSE;  // on arrive en attente -> on est pas prêt par défaut
@@ -332,17 +341,19 @@ int main(int argc, char **argv){
                 msgsnd(BAL_ID, &msg_ready, MSG_SIZEOF(msg_ready_player_t), 0);  // envoie de l'état d'attente dans la BAL
 
                 // on change l'affichage
-                mvprintw(11, 13, "Ready : ");
-                attron(A_BOLD);
-                if (ready) {
-                    attron(COLOR_PAIR(2));
-                    printw("YES");
-                } else {
-                    attron(COLOR_PAIR(3));
-                    printw("NO ");
-                }
-                attroff(A_BOLD);
-                attron(COLOR_PAIR(1));
+                pthread_mutex_lock(&MUT_NCURSES);
+                    mvprintw(11, 13, "Ready : ");
+                    attron(A_BOLD);
+                    if (ready) {
+                        attron(COLOR_PAIR(2));
+                        printw("YES");
+                    } else {
+                        attron(COLOR_PAIR(3));
+                        printw("NO ");
+                    }
+                    attroff(A_BOLD);
+                    attron(COLOR_PAIR(1));
+                pthread_mutex_unlock(&MUT_NCURSES);
             }
             
 
@@ -374,9 +385,16 @@ int main(int argc, char **argv){
                         sem_wait(SEM_SCORE); 
                     
                             info_score = shmat(SHM_SCORE, NULL, 0); 
-                            
-                            affichage_podium(info_score); 
 
+                            pthread_mutex_lock(&MUT_NCURSES);
+
+                                clear();
+                                mvprintw(1, 1, "MODE PODIUM");  // FIXME: on a jamais de passage en mode podium en fin de partie
+                                refresh();
+                            
+                                affichage_podium(info_score); 
+
+                            pthread_mutex_unlock(&MUT_NCURSES);
 
                             shmdt(info_score); 
                             
@@ -419,10 +437,13 @@ int main(int argc, char **argv){
 
                         pthread_mutex_unlock(&MUT_TETROMINO);
 
+                        pthread_mutex_lock(&MUT_NCURSES);
 
-                        clear();
+                            clear();
 
-                        premier_render();  // pour afficher les éléments statiques du GUI
+                            premier_render();  // pour afficher les éléments statiques du GUI
+
+                        pthread_mutex_unlock(&MUT_NCURSES);
 
                         pthread_mutex_lock(&MUT_THREAD_PATIE);
 
@@ -439,50 +460,85 @@ int main(int argc, char **argv){
                         _premiere_exec = FALSE;
                     }
 
-                    // TODO: briser le getch() si on est "mort" pour afficher l'état d'attente...
-
-                    char touche = getch();
-                    if (touche == 'a') {  // gauche
-                        pthread_mutex_lock(&MUT_TETROMINO);
-
-                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
-
-                        x_tetr--;
-                        if (collision_bords() || collision_grille()) {
-                            x_tetr ++;
-                        }
-
-
-                        pthread_mutex_unlock(&MUT_TETROMINO);
-                    }
-                    else if (touche == 'e') {  // droite
-                        pthread_mutex_lock(&MUT_TETROMINO);
+                    if (!mort) {  // encore en train de jouer              
                         
-                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
-
-                        x_tetr++;
-                        if (collision_bords() || collision_grille()) {
-                            x_tetr --;
-                        }
-                       
-                        pthread_mutex_unlock(&MUT_TETROMINO);
-                    }
-                    else if (touche == 'z') {  // rotation
-                        pthread_mutex_lock(&MUT_TETROMINO);
-
-                        tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
                         
-                        rot_tetr = (rot_tetr+1)%4;
-                        if (collision_bords() || collision_grille()) {
-                            rot_tetr = (rot_tetr+3)%4;  // +3 plutot que -1 pour évouter le fait que -1%4 donne -1
-                        }
-                       
-                        pthread_mutex_unlock(&MUT_TETROMINO);
-                    }
+                        timeout(50); // le getch() est bloquant pendant 50ms...
+                        char touche = getch();
+                        
+                        
+                        if (touche == 'a') {  // gauche
+                            pthread_mutex_lock(&MUT_TETROMINO);
 
-                    // maj de l'affuchage après la logique finie
-                    render();
-                    refresh();
+                            pthread_mutex_lock(&MUT_NCURSES);
+                                tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+                            pthread_mutex_unlock(&MUT_NCURSES);
+
+                            x_tetr--;
+                            if (collision_bords() || collision_grille()) {
+                                x_tetr ++;
+                            }
+
+
+                            pthread_mutex_unlock(&MUT_TETROMINO);
+                        }
+                        else if (touche == 'e') {  // droite
+                            pthread_mutex_lock(&MUT_TETROMINO);
+                            
+                            pthread_mutex_lock(&MUT_NCURSES);
+                                tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+                            pthread_mutex_unlock(&MUT_NCURSES);
+
+                            x_tetr++;
+                            if (collision_bords() || collision_grille()) {
+                                x_tetr --;
+                            }
+                        
+                            pthread_mutex_unlock(&MUT_TETROMINO);
+                        }
+                        else if (touche == 'z') {  // rotation
+                            pthread_mutex_lock(&MUT_TETROMINO);
+
+                            pthread_mutex_lock(&MUT_NCURSES);
+                                tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+                            pthread_mutex_unlock(&MUT_NCURSES);
+                            
+                            rot_tetr = (rot_tetr+1)%4;
+                            if (collision_bords() || collision_grille()) {
+                                rot_tetr = (rot_tetr+3)%4;  // +3 plutot que -1 pour évouter le fait que -1%4 donne -1
+                            }
+                        
+                            pthread_mutex_unlock(&MUT_TETROMINO);
+                        }
+                        
+                        pthread_mutex_lock(&MUT_THREAD_PATIE);
+
+                            if (!mort && !thread_partie_while) {
+                                // mort pas eéncore détectée mais le thread ne s'éxécute plus -> on viens de mort
+                                pthread_mutex_lock(&MUT_NCURSES);
+                                    clear();
+                                    mvprintw(1, 1, "GAME OVER !");
+
+                                    refresh();
+                                pthread_mutex_unlock(&MUT_NCURSES);
+                            }
+
+                            mort = !thread_partie_while;  // si le thread s'éxécute -> on est pas mort
+
+                            if (mort) {
+                                continue;  // on skip le render et le refresh
+                            }
+
+                        pthread_mutex_unlock(&MUT_THREAD_PATIE);
+
+                        // maj de l'affuchage après la logique finie
+                        pthread_mutex_lock(&MUT_NCURSES);
+                            render();
+                            refresh();
+                        pthread_mutex_unlock(&MUT_NCURSES);
+                    } else {
+                        // on est mort, on ne fait rien car on attent le "SIG_END" du serveur
+                    }
 
                 #else  // section en mode test
                     if (_premiere_exec) {
@@ -515,19 +571,19 @@ int main(int argc, char **argv){
                 #endif  // MODE_TEST
             } else {
                 //printf("CLIENT] Partie en cours ...\n");
-                
-                affichage_logo(2, 23);
-                
-                mvprintw(8, 13, "Welcome ");
-                attron(COLOR_PAIR(2));
-                printw("%s", joueur.pseudo);
-                attron(COLOR_PAIR(1));
-                printw(" to the game : Tetriis !!");
-                mvprintw(7, 13, "Game in progress ..."); 
-                mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+                pthread_mutex_lock(&MUT_NCURSES);
+                    affichage_logo(2, 23);
+                    
+                    mvprintw(8, 13, "Welcome ");
+                    attron(COLOR_PAIR(2));
+                    printw("%s", joueur.pseudo);
+                    attron(COLOR_PAIR(1));
+                    printw(" to the game : Tetriis !!");
+                    mvprintw(7, 13, "Game in progress ..."); 
+                    mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
-                refresh();
-
+                    refresh();
+                pthread_mutex_unlock(&MUT_NCURSES);
 
                 maj_info_serveur();
             }
@@ -802,6 +858,8 @@ void tetromino_effacer(int idx_tetromino, int x, int y, int rot) {  // comme tet
 
 void render() {
 
+    effacer_grille();
+
     // pièce actuelle
     tetromino_render(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
 
@@ -815,6 +873,9 @@ void render() {
         }
     }
     attron(COLOR_PAIR(1));
+
+    // bordures
+    bordures_render();
 
     // prochaine pièce (efface puis affiche pour eviter les chevauchements)
     mvprintw(CONST_Y_OFF_GRILLE  , CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
@@ -867,9 +928,10 @@ void * thread_partie(void * arg) {
             #pragma region GRAVITE
             // --------------------------------------- GRAVITE --------------------------------------- //
             
-
-            tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
-            bordures_render();
+            pthread_mutex_lock(&MUT_NCURSES);
+                tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+                bordures_render();
+            pthread_mutex_unlock(&MUT_NCURSES);
 
             y_tetr++;  // on descend la piece
 
@@ -912,7 +974,9 @@ void * thread_partie(void * arg) {
             // --------------------------------------- LIGNES COMPLETES --------------------------------------- //
             int lignes_sup = supprimer_lignes();
             if (lignes_sup > 0) {
-                effacer_grille();
+                pthread_mutex_lock(&MUT_NCURSES);
+                    effacer_grille();
+                pthread_mutex_unlock(&MUT_NCURSES);
 
                 sup_consecutives += lignes_sup;
 
@@ -936,9 +1000,11 @@ void * thread_partie(void * arg) {
 
         pthread_mutex_unlock(&MUT_TETROMINO);
 
-        render();
-        refresh();        
-
+        // grâce au timeout, on fait le render jsute dans le main
+        // pthread_mutex_lock(&MUT_NCURSES);
+        //     render();
+        //     refresh();        
+        // pthread_mutex_unlock(&MUT_NCURSES);
 
         // on quitte le thread ?
         pthread_mutex_lock(&MUT_THREAD_PATIE);
@@ -987,6 +1053,7 @@ void deroute(int signal){
         case SIG_START : 
             
             // SIG_START -> le serveur nous signale de passer de attente à partie
+            pthread_mutex_lock(&MUT_NCURSES);
             clear();
 
             for (int s=3; s>0; s--) {
@@ -1000,7 +1067,7 @@ void deroute(int signal){
             usleep(1000000); // 1 s
 
             refresh();
-
+            pthread_mutex_unlock(&MUT_NCURSES);
 
             maj_info_serveur();
 
@@ -1009,9 +1076,18 @@ void deroute(int signal){
 
         case SIG_END : 
             // SIG_END -> le serveur nous signale de passer de partie à podium
-            clear(); 
-            refresh(); 
+
+            pthread_mutex_lock(&MUT_THREAD_PATIE);
+                thread_partie_while = FALSE;
+            pthread_mutex_unlock(&MUT_THREAD_PATIE);
+
+            pthread_mutex_lock(&MUT_NCURSES);
+                clear(); 
+                refresh(); 
+            pthread_mutex_unlock(&MUT_NCURSES);
+
             maj_info_serveur(); 
+
 
             break; 
 
