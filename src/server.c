@@ -368,14 +368,6 @@ int main(){
                 sem_post(SEM_SCORE); 
 
             pthread_mutex_unlock(&MUT_SCORE); 
-
-            // SIGNAL DE FIN DE PARTIE
-            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-            for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
-                kill(joueurs_enregistre.liste_joueurs[i].pid_client, SIG_END); 
-            }
-            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
-
             
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
             close_ecoute_parti = TRUE;              // PARTIE TERMINEE / FERMETURE THREAD ECOUTE PARTIE
@@ -394,6 +386,23 @@ int main(){
             // --------------------------------------- PODIUM --------------------------------------- //
             // MODIFICATION ETAT DU SERVEUR
             changement_etat_serveur(PODIUM);  
+
+            // SIGNAL DE FIN DE PARTIE
+            pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+
+                for(int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++){
+
+                    pid_t pid = joueurs_enregistre.liste_joueurs[i].pid_client;
+
+                    if(kill(pid, SIG_END) == -1){
+                        perror("kill SIG_END");
+                    }
+                }
+
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+
+
+
             do
             {
                 pthread_mutex_lock(&MUT_SCORE); 
@@ -477,17 +486,17 @@ int main(){
                     pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
                     break; 
                 case 1 : 
-                    int index = find_index_player(pid_client); 
-                    if(index != -1){
-                        pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+                    pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+                        int index = find_index_player(pid_client); 
+                        if(index != -1){
 
-                        for(int i = index; i < joueurs_enregistre.nb_joueurs; i++){
-                            joueurs_enregistre.liste_joueurs[i] = joueurs_enregistre.liste_joueurs[i+1]; 
+                            for(int i = index; i < joueurs_enregistre.nb_joueurs; i++){
+                                joueurs_enregistre.liste_joueurs[i] = joueurs_enregistre.liste_joueurs[i+1]; 
+                            }
+                            joueurs_enregistre.nb_joueurs--; 
+
                         }
-                        joueurs_enregistre.nb_joueurs--; 
-
-                        pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
-                    }
+                    pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
                     break; 
                 default : 
                     break; 
@@ -664,7 +673,7 @@ int main(){
         //pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
         for(int i = 0; i < joueurs_enregistre.nb_joueurs; i++){
             if(joueurs_enregistre.liste_joueurs[i].pid_client == pid_joueur){
-                pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+                //pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
                 return i; 
             }
         }
@@ -704,16 +713,16 @@ int main(){
     void changement_etat_serveur(etat_serveur_t etat_serveur){
         pthread_mutex_lock(&MUT_UPDATE_SERVER);  
         
-        sem_wait(SEM_INFO_SERVEUR); 
+            sem_wait(SEM_INFO_SERVEUR); 
 
-        info_serveur_t * info_serveur = shmat(SHM_INFO_SERVEUR, NULL, 0); 
-        info_serveur->pid_serveur = getpid(); 
-        info_serveur->etat_serveur = etat_serveur; 
-        shmdt(info_serveur); 
-        
+                info_serveur_t * info_serveur = shmat(SHM_INFO_SERVEUR, NULL, 0); 
+                info_serveur->pid_serveur = getpid(); 
+                info_serveur->etat_serveur = etat_serveur; 
+                shmdt(info_serveur); 
+                
 
-        sem_post(SEM_INFO_SERVEUR); 
-        
+            sem_post(SEM_INFO_SERVEUR); 
+            
         pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
     }
 
