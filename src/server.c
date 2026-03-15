@@ -386,12 +386,12 @@ int main(){
             // --------------------------------------- PODIUM --------------------------------------- //
             // MODIFICATION ETAT DU SERVEUR
             changement_etat_serveur(PODIUM);  
-
+            clear(); 
             // SIGNAL DE FIN DE PARTIE
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
 
                 for(int i = 0; i < joueurs_enregistre.nb_joueurs_en_partie; i++){
-
+ 
                     pid_t pid = joueurs_enregistre.liste_joueurs[i].pid_client;
 
                     if(kill(pid, SIG_END) == -1){
@@ -400,8 +400,6 @@ int main(){
                 }
 
             pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
-
-
 
             do
             {

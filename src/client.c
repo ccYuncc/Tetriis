@@ -525,11 +525,12 @@ int main(int argc, char **argv){
 
                             mort = !thread_partie_while;  // si le thread s'éxécute -> on est pas mort
 
+                        pthread_mutex_unlock(&MUT_THREAD_PATIE);
+
                             if (mort) {
                                 continue;  // on skip le render et le refresh
                             }
 
-                        pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
                         // maj de l'affuchage après la logique finie
                         pthread_mutex_lock(&MUT_NCURSES);
