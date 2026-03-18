@@ -513,7 +513,11 @@ int main(int argc, char **argv){
                                 // mort pas eéncore détectée mais le thread ne s'éxécute plus -> on viens de mort
                                 pthread_mutex_lock(&MUT_NCURSES);
                                     clear();
-                                    mvprintw(1, 1, "GAME OVER !");
+                                    affichage_logo(2, 23);
+                    
+                                    mvprintw(8, 33, "GAME OVER !");
+                                    mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+
                                     refresh();
                                 pthread_mutex_unlock(&MUT_NCURSES);
                             }
