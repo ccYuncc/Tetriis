@@ -377,36 +377,32 @@ int main(int argc, char **argv){
 
                 pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
-
-                do
-                {
-                    pthread_mutex_lock(&MUT_SCORE); 
-                                
-                        sem_wait(SEM_SCORE); 
-                    
-                            info_score = shmat(SHM_SCORE, NULL, 0); 
-
-                            pthread_mutex_lock(&MUT_NCURSES);
-
-                                clear();
-                                mvprintw(1, 1, "MODE PODIUM");  // FIXME: on a jamais de passage en mode podium en fin de partie
-                                refresh();
-                            
-                                affichage_podium(info_score); 
-
-                            pthread_mutex_unlock(&MUT_NCURSES);
-
-                            shmdt(info_score); 
-                            
-                        sem_post(SEM_SCORE); 
-
-                    pthread_mutex_unlock(&MUT_SCORE); 
-                    usleep(500000); // 50ms
-                } while (1);
-
-
                 _premiere_exec = FALSE;
             }
+
+            pthread_mutex_lock(&MUT_SCORE); 
+                            
+                sem_wait(SEM_SCORE); 
+            
+                    info_score = shmat(SHM_SCORE, NULL, 0); 
+
+                    pthread_mutex_lock(&MUT_NCURSES);
+
+                        clear();
+                        mvprintw(1, 1, "MODE PODIUM");  // FIXME: on a jamais de passage en mode podium en fin de partie
+                        refresh();
+                    
+                        affichage_podium(info_score); 
+
+                    pthread_mutex_unlock(&MUT_NCURSES);
+
+                    shmdt(info_score); 
+                    
+                sem_post(SEM_SCORE); 
+
+            pthread_mutex_unlock(&MUT_SCORE); 
+            usleep(500000); // 50ms
+            
             
             // --------------------------------------------------------------------------------------- //
             #pragma endregion
@@ -518,7 +514,6 @@ int main(int argc, char **argv){
                                 pthread_mutex_lock(&MUT_NCURSES);
                                     clear();
                                     mvprintw(1, 1, "GAME OVER !");
-
                                     refresh();
                                 pthread_mutex_unlock(&MUT_NCURSES);
                             }
@@ -538,7 +533,8 @@ int main(int argc, char **argv){
                             refresh();
                         pthread_mutex_unlock(&MUT_NCURSES);
                     } else {
-                        // on est mort, on ne fait rien car on attent le "SIG_END" du serveur
+                        // on est mort, on ne fait rien car on attent le "SIG_END" du serveur*
+                        maj_info_serveur();
                     }
 
                 #else  // section en mode test
@@ -1082,12 +1078,18 @@ void deroute(int signal){
                 thread_partie_while = FALSE;
             pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
-            pthread_mutex_lock(&MUT_NCURSES);
-                clear(); 
-                refresh(); 
-            pthread_mutex_unlock(&MUT_NCURSES);
+            // pthread_mutex_lock(&MUT_NCURSES);
+            //     clear(); 
+            //     refresh(); 
+            // pthread_mutex_unlock(&MUT_NCURSES);
 
-            maj_info_serveur(); 
+            // maj_info_serveur(); 
+
+            // mvprintw(10, 10, "LOADING...");  // utilisé pour "flush" ncurses et permettre d'udpate le rendu
+
+            // sleep(1);
+            
+            // refresh(); 
 
 
             break; 
