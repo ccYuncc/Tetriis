@@ -14,13 +14,16 @@
 
 #include "server.h" 
 
+
 // SEMAPHORE
 sem_t * SEM_INFO_SERVEUR;
 sem_t * SEM_SCORE;  
 
+
 // SHM
 int SHM_INFO_SERVEUR;
 int SHM_SCORE; 
+
 
 // MUTEX
 pthread_mutex_t MUT_UPDATE_SERVER = PTHREAD_MUTEX_INITIALIZER; 
@@ -32,11 +35,14 @@ pthread_mutex_t MUT_CLOSE_ECOUTE_PARTI = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t MUT_SCORE = PTHREAD_MUTEX_INITIALIZER; 
 pthread_mutex_t MUT_EVENT = PTHREAD_MUTEX_INITIALIZER; 
 
+
 // CONDITION 
 pthread_cond_t COND_TRY_CONNEXION = PTHREAD_COND_INITIALIZER;
 
+
 // BAL
 int BAL_ID; 
+
 
 // JOUEURS
 joueurs_t joueurs_enregistre; 
@@ -44,15 +50,20 @@ bool_t etat_joueurs[CONST_NOMBRE_JOUEURS];
 bool_t joueurs_vivants[CONST_NOMBRE_JOUEURS]; 
 event_t last_event; 
 
+
 // VARIABLES GLOBALE
 bool close_ecoute = FALSE; 
 bool close_ecoute_parti = FALSE; 
 
+
+
 // PROTOTYPE
+
     // ----- THREAD -----
 void * thread_connexion(void * arg); //  THREAD ECOUTE CONNEXION DES JOUEURS
 void * thread_ecoute(void * arg); //  THREAD ECOUTE ATTENTE DE LA PARTIE
 void * thread_ecoute_parti(void * arg); //  THREAD ECOUTE DURANT LA PARTIE
+
 
     // ----- AFFICHAGE -----
 void affichage_serveur(); //  TEXTUEL : AFFICHAGE DES DONNEES DES SHM DU SERVEUR
@@ -60,11 +71,13 @@ void affichage_liste_joueurs(); //  DEBUG : AFFICHAGE DE LA LISTE DES JOUEURS
 void affichage_liste_joueur_etat(); //  DEBUG : AFFICHAGE ETAT DES JOUEURS
 void affichage_attente(); //  NCURSES : AFFICHAGE D'ATTENTE
 
+
     // ----- LECTURE/ECRITURE DONNEES -----
 void changement_etat_serveur(etat_serveur_t etat_serveur); //  MODIFIE L'ETAT DU SERVEUR (ATTENTE, PARTIE, PODIUM)
 int find_index_player(pid_t pid_joueur); //  TROUVE L'INDEX DU JOUEUR SELON SON PID
 bool ready_player_start(); //  TEST : VALIDE LE LANCEMENT DE LA PARTIE OU NON
 int nb_ready_player(); //  CALCUL NOMBRE DE JOUEURS PRÊTS
+
 
     // ----- GESTION DES ELEMENTS DE DONNEES -----
 void deroute(); 
@@ -72,13 +85,19 @@ void close_shm_sem();
 int check_end_game(); 
 
 
+
+
+
 int main(){
 
     #pragma region INIT
     // --------------------------------------- INIT --------------------------------------- //
     int nbJoueurs; 
-    int rows, cols; 
-    int timer; 
+    int rows, cols;  
+
+    time_t debut, fin; 
+
+
     
     pthread_t TH_CONNEXION; 
     pthread_t TH_ECOUTE;  
@@ -127,9 +146,9 @@ int main(){
 
     //  Initialisation bool d'état des joueurs en partie (VIVANT = TRUE | MORT = FALSE)
     pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
-    for(int i = 0; i < CONST_NOMBRE_JOUEURS; i++){
-        joueurs_vivants[i] = TRUE; 
-    }
+        for(int i = 0; i < CONST_NOMBRE_JOUEURS; i++){
+            joueurs_vivants[i] = TRUE; 
+        }
     pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS);
 
     affichage_serveur();  // AFFICHAGE
@@ -151,12 +170,14 @@ int main(){
     // --------------------------------------- WRITE_INFO_SERVEUR --------------------------------------- //
     // Ecriture dans SHM_INFO_SERVEUR
     // Pas d'utilisation de la fonction changement_etat_serveur car la sémaphore est initialisé à 0 au début du programme
-    pthread_mutex_lock(&MUT_UPDATE_SERVER); 
-    info_serveur_t * info_serveur = shmat(SHM_INFO_SERVEUR, NULL, 0); 
-    info_serveur->pid_serveur = getpid(); 
-    info_serveur->etat_serveur = ATTENTE; 
-    shmdt(info_serveur); 
-    sem_post(SEM_INFO_SERVEUR);  
+    pthread_mutex_lock(&MUT_UPDATE_SERVER);
+
+        info_serveur_t * info_serveur = shmat(SHM_INFO_SERVEUR, NULL, 0); 
+        info_serveur->pid_serveur = getpid(); 
+        info_serveur->etat_serveur = ATTENTE; 
+        shmdt(info_serveur); 
+        sem_post(SEM_INFO_SERVEUR);  
+
     pthread_mutex_unlock(&MUT_UPDATE_SERVER); 
 
     // -------------------------------------------------------------------------------------------------- //
@@ -165,9 +186,12 @@ int main(){
 
     #pragma region CREATE_THREAD_CONNEXION
     // --------------------------------------- CREATE_THREAD_CONNEXION --------------------------------------- //
+    
     // Création des threads
     // THREAD DE CONNEXION
     pthread_create(&TH_CONNEXION, NULL, thread_connexion, NULL); 
+    
+    // -------------------------------------------------------------------------------------------------- //
     #pragma endregion
 
     
@@ -175,25 +199,64 @@ int main(){
     do
     {
     // --------------------------------------- JEU --------------------------------------- //
-        #pragma region REINIT 
-        // REINITIALISATION DES DONNEES APRES UNE PARTIE 
-        timer = 0; 
+        #pragma region REINIT  
+
+        // REINITIALISATION DU TIMER
+        debut = 0;
+        fin = 0; 
+
+
+
+
+        // REINITIALISATION DES ECOUTES
         init_ncurses(); 
         nodelay(stdscr, TRUE);   // getch devient non bloquant
 
         pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
-        close_ecoute = FALSE;
+            
+            close_ecoute = FALSE;
+       
         pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);
 
         pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
-        close_ecoute_parti = FALSE; 
+            
+            close_ecoute_parti = FALSE; 
+        
         pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI);
 
         pthread_mutex_lock(&MUT_EVENT); 
-        last_event.event = 0; 
-        strcpy(last_event.pseudo, "");
+          
+            last_event.event = 0; 
+            strcpy(last_event.pseudo, "");
+        
         pthread_mutex_unlock(&MUT_EVENT); 
 
+
+
+
+        // REINITIALISATION DES DONNEES
+
+        // Initialisation bool d'état des joueurs
+        pthread_mutex_lock(&MUT_ETAT_JOUEURS);
+
+            for(int i = 0; i < CONST_NOMBRE_JOUEURS; i++){
+                etat_joueurs[i] = FALSE; 
+            }
+
+        pthread_mutex_unlock(&MUT_ETAT_JOUEURS); 
+
+        //  Initialisation bool d'état des joueurs en partie (VIVANT = TRUE | MORT = FALSE)
+        pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
+
+            for(int i = 0; i < CONST_NOMBRE_JOUEURS; i++){
+                joueurs_vivants[i] = TRUE; 
+            }
+
+        pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS);
+
+
+        last_event.event = -1; 
+        last_event.pseudo = ""; 
 
         #pragma endregion
     
@@ -208,8 +271,11 @@ int main(){
             msg_ready_player_t tmp;
             while (msgrcv(BAL_ID, &tmp, MSG_SIZEOF(msg_ready_player_t),MSG_TYPE_READY, IPC_NOWAIT) != -1);
 
+            
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE);
-            close_ecoute = FALSE;
+               
+                close_ecoute = FALSE;
+            
             pthread_mutex_unlock(&MUT_CLOSE_ECOUTE);
 
             pthread_create(&TH_ECOUTE, NULL, thread_ecoute, NULL); 
@@ -217,13 +283,15 @@ int main(){
             // REINITIALISATION DU NOMBRE DE JOUEURS EN PARTIE
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
             joueurs_enregistre.nb_joueurs_en_partie = 0; 
-            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+            pthread_mutex_unlock(&MUT_LISTE_JOUEURS);  
 
             while(!ready_player_start()){
                 // ncurses ne fonctionne pas avec les threads 
                 affichage_attente(); 
                 usleep(100000); // 100 ms
             }
+
+
 
             //  FIN DE L'ATTENTE : GESTION D'AVANT PARTIE 
             //  Fermeture du thread
@@ -275,6 +343,8 @@ int main(){
             //  OUVERTURE DU THREAD D'ECOUTE DE JEU
             pthread_create(&TH_ECOUTE_PARTI, NULL, thread_ecoute_parti, NULL);
 
+            // lancement du TIMER
+            debut = time(NULL);
             
             do{   // ATTENTE DE FIN DE PARTIE
                 //  Affichage
@@ -289,8 +359,26 @@ int main(){
 
                 mvprintw(9, ((cols-25)/2), "Higher score : [Score] by [Pseudo]"); 
                 mvprintw(11, ((cols-30)/2), "Number of players alive : %d/%d", check_end_game(), nbJoueurs); 
-                mvprintw(13, ((cols-10)/2), "Time : %d s", timer); 
-                timer++; 
+
+                fin = time(NULL); 
+                unsigned long secondes = (unsigned long) difftime( fin, debut ); 
+
+                if(secondes >= 60){
+                    int minutes = secondes / 60; 
+                    int reste = secondes % 60; 
+
+                    if (reste > 0){
+                        mvprintw(13, ((cols-16)/2), "Time : %d min %d s", minutes, reste);
+                    }
+                    else{
+                        mvprintw(13, ((cols-16)/2), "Time : %d min", minutes);
+                    }
+                }
+                else{
+                    mvprintw(13, ((cols-16)/2), "Time : %lu sec", secondes);
+                } 
+
+
 
                 switch(last_event.event){
                     case 1 :
@@ -298,12 +386,17 @@ int main(){
 
                         attron(A_BOLD);
                         attron(COLOR_PAIR(3));
+                        
                         pthread_mutex_lock(&MUT_EVENT); 
+                            
                             mvprintw(15, ((cols-22)/2), "%s", last_event.pseudo); 
+                        
                         pthread_mutex_unlock(&MUT_EVENT); 
+                        
                         attron(COLOR_PAIR(1));
                         attroff(A_BOLD);
                         printw(" is dead...");
+                        
                         refresh(); 
 
                         break; 
@@ -314,15 +407,22 @@ int main(){
                         // AFFICHAGE MALUS
                         // AFFICHAGE MORT SUR LE SERVEUR
                         pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-                        attron(A_BOLD);
-                        attron(COLOR_PAIR(2));
-                        pthread_mutex_lock(&MUT_EVENT); 
-                            mvprintw(14, ((cols-50)/2), "%s", last_event.pseudo); 
-                        pthread_mutex_unlock(&MUT_EVENT); 
-                        attron(COLOR_PAIR(1));
-                        attroff(A_BOLD);
-                        printw(" gave everyone a lovely gift!");
+
+                            attron(A_BOLD);
+                            attron(COLOR_PAIR(2));
+                            
+                            pthread_mutex_lock(&MUT_EVENT); 
+                                
+                                mvprintw(14, ((cols-50)/2), "%s", last_event.pseudo); 
+                            
+                            pthread_mutex_unlock(&MUT_EVENT); 
+                            
+                            attron(COLOR_PAIR(1));
+                            attroff(A_BOLD);
+                            printw(" gave everyone a lovely gift!");
+
                         pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+                        
                         refresh(); 
 
                         break; 
@@ -338,12 +438,20 @@ int main(){
                 usleep(1000000); // 1s
             } while(check_end_game() != 1); 
  
+
+
             //Enregistrement du dernier joueur de la partie
             //Récup index dernier survivant.
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
-            int nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
+                
+                int nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
+            
             pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+        
             int index; 
+            
+            // RECUPERATION PSEUDO DERNIER JOUEURS
+            
             pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
                 for(int i = 0; i < nbJoueurs; i++){
                     if(joueurs_vivants[i] == TRUE){
@@ -352,10 +460,20 @@ int main(){
                     }
                 }
             pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS); 
+            
+            
             char pseudo_joueur[CONST_LONGUEUR_PSEUDO]; 
+
+            
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+                
                 strcpy(pseudo_joueur, joueurs_enregistre.liste_joueurs[index].pseudo); 
-            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+            
+                pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+
+
+
+            // MODIFICATION SCORE : AJOUT DERNIER JOUEUR VIVANT
 
             pthread_mutex_lock(&MUT_SCORE); 
                         
@@ -369,13 +487,16 @@ int main(){
 
             pthread_mutex_unlock(&MUT_SCORE); 
             
+
+            // FERMETURE DES THREADS DE JEU
+
             pthread_mutex_lock(&MUT_CLOSE_ECOUTE_PARTI); 
-            close_ecoute_parti = TRUE;              // PARTIE TERMINEE / FERMETURE THREAD ECOUTE PARTIE
+                
+                close_ecoute_parti = TRUE;              // PARTIE TERMINEE / FERMETURE THREAD ECOUTE PARTIE
+            
             pthread_mutex_unlock(&MUT_CLOSE_ECOUTE_PARTI); 
 
             pthread_join(TH_ECOUTE_PARTI, NULL); 
-
-            //while(1); 
 
 
             // -------------------------------------------------------------------------------------------------- //
@@ -384,9 +505,14 @@ int main(){
         
         #pragma region PODIUM 
             // --------------------------------------- PODIUM --------------------------------------- //
+            
+            
             // MODIFICATION ETAT DU SERVEUR
             changement_etat_serveur(PODIUM);  
             clear(); 
+
+
+
             // SIGNAL DE FIN DE PARTIE
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
 
@@ -401,24 +527,25 @@ int main(){
 
             pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
-            do
-            {
-                pthread_mutex_lock(&MUT_SCORE); 
-                            
-                    sem_wait(SEM_SCORE); 
-                
-                        info_score = shmat(SHM_SCORE, NULL, 0); 
+
+
+            // AFFICHAGE PODIUM 
+
+            pthread_mutex_lock(&MUT_SCORE); 
                         
-                        affichage_podium(info_score); 
+                sem_wait(SEM_SCORE); 
+            
+                    info_score = shmat(SHM_SCORE, NULL, 0); 
+                    
+                    affichage_podium(info_score); 
 
 
-                        shmdt(info_score); 
-                        
-                    sem_post(SEM_SCORE); 
+                    shmdt(info_score); 
+                    
+                sem_post(SEM_SCORE); 
 
-                pthread_mutex_unlock(&MUT_SCORE); 
-                usleep(500000); // 50ms
-            } while (1);
+            pthread_mutex_unlock(&MUT_SCORE); 
+            sleep(20); // 20s
 
 
             // -------------------------------------------------------------------------------------------------- //
