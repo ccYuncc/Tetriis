@@ -299,6 +299,8 @@ int main(int argc, char **argv){
 
                 pthread_mutex_lock(&MUT_NCURSES);
 
+                    clear();
+
                     affichage_logo(2, 23);
                     
                     mvprintw(7, 13, "Waiting room..."); 
@@ -390,8 +392,6 @@ int main(int argc, char **argv){
                     pthread_mutex_lock(&MUT_NCURSES);
 
                         clear();
-                        mvprintw(1, 1, "MODE PODIUM");  // FIXME: on a jamais de passage en mode podium en fin de partie
-                        refresh();
                     
                         affichage_podium(info_score); 
 
@@ -403,6 +403,7 @@ int main(int argc, char **argv){
 
             pthread_mutex_unlock(&MUT_SCORE); 
             usleep(500000); // 50ms
+            maj_info_serveur();
             
             
             // --------------------------------------------------------------------------------------- //
@@ -654,6 +655,8 @@ int main(int argc, char **argv){
             } else {
                 //printf("CLIENT] Partie en cours ...\n");
                 pthread_mutex_lock(&MUT_NCURSES);
+                    clear();
+                    
                     affichage_logo(2, 23);
                     
                     mvprintw(8, 13, "Welcome ");
@@ -1117,8 +1120,12 @@ void * thread_recep(void * arg) {
 
                 for (int x=0; x<CONST_LARGEUR_GRILLE; x++) {
                     for (int y=0; y<CONST_HAUTEUR_GRILLE-1; y++) {
-                        if (grille[y+1][x] != 0 || y == CONST_HAUTEUR_GRILLE-2) {
+                        if (grille[y+1][x] != 0) {
                             grille[y][x] = 1;  // BLANC sur NOIR
+                            break;  // on passe à la colonne suivante
+                        }
+                        else if (y == CONST_HAUTEUR_GRILLE-2) {
+                            grille[y+1][x] = 1;  // BLANC sur NOIR
                             break;  // on passe à la colonne suivante
                         }
                     }
