@@ -506,6 +506,81 @@ int main(int argc, char **argv){
                         
                             pthread_mutex_unlock(&MUT_TETROMINO);
                         }
+                        else if (touche == 's' ) {
+                            pthread_mutex_lock(&MUT_TETROMINO);
+                            #pragma region GRAVITE
+                            // --------------------------------------- GRAVITE --------------------------------------- //
+                            
+                            pthread_mutex_lock(&MUT_NCURSES);
+                                tetromino_effacer(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr);
+                                bordures_render();
+                            pthread_mutex_unlock(&MUT_NCURSES);
+
+                            y_tetr++;  // on descend la piece
+
+                            if (collision_bas() || collision_grille()) {
+                                y_tetr--;
+
+                                if (ajouter_tetr_grille()) {  // ajout impossible
+
+                                    msg_game_player_t msg_game_player;
+                                    msg_game_player.type = MSG_TYPE_GAME;
+                                    msg_game_player.pid_joueur = joueur.pid_client;
+                                    msg_game_player.type_msg = GAME_MSG_DEATH;
+
+                                    msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
+
+                                    pthread_mutex_lock(&MUT_THREAD_PATIE);
+
+                                    thread_partie_while = FALSE;
+
+                                    pthread_mutex_unlock(&MUT_THREAD_PATIE);
+                                } else {  // ajout possible
+
+                                    // reset pièce
+                                    x_tetr = CONST_LARGEUR_GRILLE / 2 - 2;
+                                    y_tetr = -4;
+
+                                    idx_tetr = idx_proch_tetr;
+                                    idx_proch_tetr = generer_tetr();
+
+                                    rot_tetr = 0;
+                                }
+                            }
+
+                            // --------------------------------------------------------------------------------------- //
+                            #pragma endregion
+
+                            #pragma region LIGNES COMPLETES
+                            // --------------------------------------- LIGNES COMPLETES --------------------------------------- //
+                            int lignes_sup = supprimer_lignes();
+                            if (lignes_sup > 0) {
+                                pthread_mutex_lock(&MUT_NCURSES);
+                                    effacer_grille();
+                                pthread_mutex_unlock(&MUT_NCURSES);
+
+                                sup_consecutives += lignes_sup;
+
+                                // TODO: augmenter le score
+                            } else {
+                                
+                                if (sup_consecutives >= CONST_MIN_POUR_BONUS) {  // on vient d'arrêter de supprimer des lignes
+                                        msg_game_player_t msg_game_player;
+                                        msg_game_player.type = MSG_TYPE_GAME;
+                                        msg_game_player.pid_joueur = joueur.pid_client;
+                                        msg_game_player.type_msg = GAME_MSG_LINE;
+
+                                        msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
+                                }
+                                
+                                sup_consecutives = 0;
+                            }
+                            // ------------------------------------------------------------------------------------------------ //
+                            #pragma endregion
+
+
+                            pthread_mutex_unlock(&MUT_TETROMINO);
+                        }
                         
                         pthread_mutex_lock(&MUT_THREAD_PATIE);
 
@@ -948,7 +1023,6 @@ void * thread_partie(void * arg) {
 
                     msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
 
-                    // TODO: FIN DE PARTIE -> PERDU !!!!
                     pthread_mutex_lock(&MUT_THREAD_PATIE);
 
                     thread_partie_while = FALSE;
