@@ -88,7 +88,7 @@ bool_t ajouter_tetr_grille();
 int supprimer_lignes();
 
 void * thread_partie(void * arg);
-
+void * thread_recep(void * arg);
 
 
 int main(int argc, char **argv){
@@ -102,7 +102,8 @@ int main(int argc, char **argv){
         int data = 0;
     #endif  // MODE_TEST
 
-    pthread_t TH_GRAVITE;
+    pthread_t TH_PARTIE;
+    pthread_t TH_ECOUTE;
     score_t * info_score; 
 
     // OUVERTURE DES SEMAPHORES
@@ -446,8 +447,13 @@ int main(int argc, char **argv){
                             thread_partie_while = TRUE;  // on "active" le thread qui fait tomber les pièces
 
                         pthread_mutex_unlock(&MUT_THREAD_PATIE);
-                        pthread_create(&TH_GRAVITE, NULL, thread_partie, NULL);  // puis une fois la condition activée on crée le thread
-                        pthread_detach(TH_GRAVITE);  // on le détache pour ne pas avoir à join le thread pour qu'il libère ses resources
+                        pthread_create(&TH_PARTIE, NULL, thread_partie, NULL);  // puis une fois la condition activée on crée le thread
+                        pthread_detach(TH_PARTIE);  // on le détache pour ne pas avoir à join le thread pour qu'il libère ses resources
+
+                        pthread_create(&TH_ECOUTE, NULL, thread_recep, NULL);  // puis une fois la condition activée on crée le thread
+                        pthread_detach(TH_ECOUTE);  // on le détache pour ne pas avoir à join le thread pour qu'il libère ses resources
+
+                        
 
 
                         mort = FALSE;
@@ -1090,6 +1096,66 @@ void * thread_partie(void * arg) {
     }
     
     pthread_exit(0); 
+}
+
+
+void * thread_recep(void * arg) {
+    bool_t activ = TRUE;
+
+    while (activ) {
+
+
+        msg_game_server_t msg;
+
+        ssize_t res = msgrcv(BAL_ID, &msg, MSG_SIZEOF(msg_game_server_t), joueur.pid_client, IPC_NOWAIT);
+
+        if (res == -1) {
+            // rien reçu ou erreur -> on ignore
+        } else {
+            if (msg.type_msg == GAME_MSG_MALUS) {
+                pthread_mutex_lock(&MUT_TETROMINO);
+
+                for (int x=0; x<CONST_LARGEUR_GRILLE; x++) {
+                    for (int y=0; y<CONST_HAUTEUR_GRILLE-1; y++) {
+                        if (grille[y+1][x] != 0 || y == CONST_HAUTEUR_GRILLE-2) {
+                            grille[y][x] = 1;  // BLANC sur NOIR
+                            break;  // on passe à la colonne suivante
+                        }
+                    }
+                }
+
+                int lignes_sup = supprimer_lignes();
+                if (lignes_sup > 0) {
+                    pthread_mutex_lock(&MUT_NCURSES);
+                        effacer_grille();
+                    pthread_mutex_unlock(&MUT_NCURSES);
+
+                    sup_consecutives += lignes_sup;
+
+                    // TODO: augmenter le score
+                } else {
+                    
+                    if (sup_consecutives >= CONST_MIN_POUR_BONUS) {  // on vient d'arrêter de supprimer des lignes
+                            msg_game_player_t msg_game_player;
+                            msg_game_player.type = MSG_TYPE_GAME;
+                            msg_game_player.pid_joueur = joueur.pid_client;
+                            msg_game_player.type_msg = GAME_MSG_LINE;
+
+                            msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
+                    }
+                    
+                    sup_consecutives = 0;
+                }
+
+                pthread_mutex_unlock(&MUT_TETROMINO);
+            }
+        }
+
+
+        pthread_mutex_lock(&MUT_THREAD_PATIE);
+            activ = thread_partie_while;
+        pthread_mutex_unlock(&MUT_THREAD_PATIE);
+    }
 }
 
 
