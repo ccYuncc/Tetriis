@@ -34,7 +34,8 @@ pthread_mutex_t MUT_SCORE = PTHREAD_MUTEX_INITIALIZER;
 
 // AUTRES
 info_serveur_t serveur; // informations du serveur tetriis
-login_t joueur;  // contient les informations sur le client actuel
+login_t joueur_login;  // contient les informations sur le client actuel
+joueur_t joueur;  // contient les informations sur le client actuel + score
 int tetrominos[7][16] = {  // differens tetrominos (pièces de tetris) possibles
     {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},  // I
     {0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0},  // O
@@ -86,6 +87,7 @@ bool_t collision_bas();
 bool_t collision_grille();
 bool_t ajouter_tetr_grille();
 int supprimer_lignes();
+void maj_BAL_score();
 
 void * thread_partie(void * arg);
 void * thread_recep(void * arg);
@@ -105,6 +107,8 @@ int main(int argc, char **argv){
     pthread_t TH_PARTIE;
     pthread_t TH_ECOUTE;
     score_t * info_score; 
+
+    int rows, cols;
 
     // OUVERTURE DES SEMAPHORES
     SEM_INFO_SERVEUR = sem_open(CONST_SEM_NOM_INFO_SERVEUR, 0); 
@@ -176,40 +180,40 @@ int main(int argc, char **argv){
     #pragma region CONNEXION
     // --------------------------------------- CONNEXION --------------------------------------- //
 
-        joueur.fermer = FALSE;  // on veut ouvrir une connexion
+        joueur_login.fermer = FALSE;  // on veut ouvrir une connexion
 
         // ACQUISITION DU PSEUDO
 
         if (argc >= 2) {  // lancé avec ./bin/client.exe pseudo
 
-            strncpy(joueur.pseudo, argv[1], CONST_LONGUEUR_PSEUDO);
+            strncpy(joueur_login.pseudo, argv[1], CONST_LONGUEUR_PSEUDO);
 
         } else {  // lancé avec ./bin/client.exe
             printf("CLIENT] Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
-            fgets(joueur.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
-            joueur.pseudo[strlen(joueur.pseudo)-1] = '\0';
+            fgets(joueur_login.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
+            joueur_login.pseudo[strlen(joueur_login.pseudo)-1] = '\0';
 
-            while (strcmp(joueur.pseudo, "") == 0) {
+            while (strcmp(joueur_login.pseudo, "") == 0) {
                 printf("CLIENT] Veuillez rentrer un pseudo... Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
-                fgets(joueur.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
-                joueur.pseudo[strlen(joueur.pseudo)-1] = '\0';
+                fgets(joueur_login.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
+                joueur_login.pseudo[strlen(joueur_login.pseudo)-1] = '\0';
             }
         }
 
         // ACQUISITION DU PID
-        joueur.pid_client = getpid();
-        printf("CLIENT] PID du client : %d\n", joueur.pid_client);
+        joueur_login.pid_client = getpid();
+        printf("CLIENT] PID du client : %d\n", joueur_login.pid_client);
 
         msg_login_t msg_login;
         msg_login.type = MSG_TYPE_LOGIN;
-        msg_login.msg = joueur;
+        msg_login.msg = joueur_login;
         
         msgsnd(BAL_ID, &msg_login, MSG_SIZEOF(msg_login_t), 0);
 
 
         msg_reponse_serveur_t msg_reponse;
 
-        msgrcv(BAL_ID, &msg_reponse, MSG_SIZEOF(msg_reponse_serveur_t), joueur.pid_client, 0);
+        msgrcv(BAL_ID, &msg_reponse, MSG_SIZEOF(msg_reponse_serveur_t), joueur_login.pid_client, 0);
 
         printf("CLIENT] Réponse du serveur : \"%s\"\n", msg_reponse.msg);
 
@@ -234,6 +238,9 @@ int main(int argc, char **argv){
 
             return EXIT_FAILURE;
         }
+
+        joueur.login_joueur = joueur_login;
+        joueur.score = 0;
 
 
     // ----------------------------------------------------------------------------------------- //
@@ -265,10 +272,10 @@ int main(int argc, char **argv){
     etat_serveur_t _dernier_etat = serveur.etat_serveur;
     etat_serveur_t etat;  // etat du serveur stocké en dehors de la variable globale pour pas avoir besoin de mutex lock/unlock
     
-    bool_t ready = FALSE;  // joueur prêt ou non dans le lobby ?
-    bool_t mort = FALSE;  // le joueur a perdu mais la partie n'est pas finie
+    bool_t ready = FALSE;  // joueur_login prêt ou non dans le lobby ?
+    bool_t mort = FALSE;  // le joueur_login a perdu mais la partie n'est pas finie
 
-    srand(joueur.pid_client);  // pour que chaque joueur ait des pièces différentes, on utilise leurs PID (unique) pour avoir une seed pour rand
+    srand(joueur_login.pid_client);  // pour que chaque joueur_login ait des pièces différentes, on utilise leurs PID (unique) pour avoir une seed pour rand
 
     // --------------------------------------- BOUCLE PRINCIPALE --------------------------------------- //
 
@@ -301,20 +308,22 @@ int main(int argc, char **argv){
 
                     clear();
 
-                    affichage_logo(2, 23);
+                    getmaxyx(stdscr, rows, cols);
+
+                    affichage_logo(2, ((cols-34)/2));
                     
-                    mvprintw(7, 13, "Waiting room..."); 
-                    mvprintw(8, 13, "Welcome ");
+                    mvprintw(7, ((cols-34)/2), "Waiting room..."); 
+                    mvprintw(8, ((cols-34)/2), "Welcome ");
                     attron(COLOR_PAIR(2));
-                    printw("%s", joueur.pseudo);
+                    printw("%s", joueur_login.pseudo);
                     attron(COLOR_PAIR(1));
                     printw(" to the game : Tetriis !!");
-                    mvprintw(10, 13, "Use ");
+                    mvprintw(10, ((cols-34)/2), "Use ");
                     attron(A_BOLD);
                     printw("[ENTER]");
                     attroff(A_BOLD);
                     printw(" to be ready or not"); 
-                    mvprintw(11, 13, "Ready : ");
+                    mvprintw(11, ((cols-34)/2), "Ready : ");
                     attron(COLOR_PAIR(3));
                     printw("NO ");
                     attron(COLOR_PAIR(1));
@@ -338,14 +347,15 @@ int main(int argc, char **argv){
 
                 msg_ready_player_t msg_ready;
                 msg_ready.type = MSG_TYPE_READY;
-                msg_ready.pid_joueur = joueur.pid_client;
+                msg_ready.pid_joueur = joueur_login.pid_client;
                 msg_ready.ready = ready;
 
                 msgsnd(BAL_ID, &msg_ready, MSG_SIZEOF(msg_ready_player_t), 0);  // envoie de l'état d'attente dans la BAL
+                getmaxyx(stdscr, rows, cols);
 
                 // on change l'affichage
                 pthread_mutex_lock(&MUT_NCURSES);
-                    mvprintw(11, 13, "Ready : ");
+                    mvprintw(11, ((cols-34)/2), "Ready : ");
                     attron(A_BOLD);
                     if (ready) {
                         attron(COLOR_PAIR(2));
@@ -380,12 +390,18 @@ int main(int argc, char **argv){
 
                 pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
+                sem_wait(SEM_SCORE); 
+                                    
+                    maj_BAL_score();
+
+                sem_post(SEM_SCORE);
+
                 _premiere_exec = FALSE;
             }
 
             pthread_mutex_lock(&MUT_SCORE); 
                             
-                sem_wait(SEM_SCORE); 
+                sem_wait(SEM_SCORE);           
             
                     info_score = shmat(SHM_SCORE, NULL, 0); 
 
@@ -455,6 +471,12 @@ int main(int argc, char **argv){
                         pthread_detach(TH_ECOUTE);  // on le détache pour ne pas avoir à join le thread pour qu'il libère ses resources
 
                         
+
+                        pthread_mutex_lock(&MUT_SCORE); 
+
+                        joueur.score = 0;  // reset du score
+
+                        pthread_mutex_unlock(&MUT_SCORE); 
 
 
                         mort = FALSE;
@@ -532,7 +554,7 @@ int main(int argc, char **argv){
 
                                     msg_game_player_t msg_game_player;
                                     msg_game_player.type = MSG_TYPE_GAME;
-                                    msg_game_player.pid_joueur = joueur.pid_client;
+                                    msg_game_player.pid_joueur = joueur_login.pid_client;
                                     msg_game_player.type_msg = GAME_MSG_DEATH;
 
                                     msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
@@ -543,6 +565,22 @@ int main(int argc, char **argv){
 
                                     pthread_mutex_unlock(&MUT_THREAD_PATIE);
                                 } else {  // ajout possible
+
+                                    // augmenter le score
+                                    pthread_mutex_lock(&MUT_SCORE); 
+
+                                    if (idx_tetr == 0 || idx_tetr == 1) {  // O ou I
+                                        joueur.score += 5;
+                                    } else if (idx_tetr == 2 || idx_tetr == 3 || idx_tetr == 5 || idx_tetr == 6) {  // S Z L ou J
+                                        joueur.score += 10;
+                                    } else {  // T
+                                        joueur.score += 15;
+                                    }
+                                    sem_wait(SEM_SCORE); 
+                                    maj_BAL_score();
+                                    sem_post(SEM_SCORE); 
+
+                                    pthread_mutex_unlock(&MUT_SCORE); 
 
                                     // reset pièce
                                     x_tetr = CONST_LARGEUR_GRILLE / 2 - 2;
@@ -568,13 +606,33 @@ int main(int argc, char **argv){
 
                                 sup_consecutives += lignes_sup;
 
-                                // TODO: augmenter le score
+                                // augmenter le score
+                                pthread_mutex_lock(&MUT_SCORE); 
+
+                                if (sup_consecutives == 1) {
+                                    joueur.score += 20;
+                                }
+                                else if (sup_consecutives == 2) {
+                                    joueur.score += 50;
+                                }
+                                else if (sup_consecutives == 3) {
+                                    joueur.score += 100;
+                                }
+                                else {  // 4 lignes ou +
+                                    joueur.score += 300;
+                                }
+                                sem_wait(SEM_SCORE); 
+                                maj_BAL_score();
+                                sem_post(SEM_SCORE); 
+
+                                pthread_mutex_unlock(&MUT_SCORE); 
+
                             } else {
                                 
                                 if (sup_consecutives >= CONST_MIN_POUR_BONUS) {  // on vient d'arrêter de supprimer des lignes
                                         msg_game_player_t msg_game_player;
                                         msg_game_player.type = MSG_TYPE_GAME;
-                                        msg_game_player.pid_joueur = joueur.pid_client;
+                                        msg_game_player.pid_joueur = joueur_login.pid_client;
                                         msg_game_player.type_msg = GAME_MSG_LINE;
 
                                         msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
@@ -595,9 +653,12 @@ int main(int argc, char **argv){
                                 // mort pas eéncore détectée mais le thread ne s'éxécute plus -> on viens de mort
                                 pthread_mutex_lock(&MUT_NCURSES);
                                     clear();
-                                    affichage_logo(2, 23);
+
+                                    getmaxyx(stdscr, rows, cols);
+                                    
+                                    affichage_logo(2, ((cols-34)/2));
                     
-                                    mvprintw(8, 33, "GAME OVER !");
+                                    mvprintw(8, ((cols-34)/2), "GAME OVER !");
                                     mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
                                     refresh();
@@ -615,8 +676,10 @@ int main(int argc, char **argv){
 
                         // maj de l'affuchage après la logique finie
                         pthread_mutex_lock(&MUT_NCURSES);
+                        pthread_mutex_lock(&MUT_SCORE); 
                             render();
                             refresh();
+                        pthread_mutex_unlock(&MUT_SCORE);
                         pthread_mutex_unlock(&MUT_NCURSES);
                     } else {
                         // on est mort, on ne fait rien car on attent le "SIG_END" du serveur*
@@ -643,7 +706,7 @@ int main(int argc, char **argv){
 
                         msg_game_player_t msg_game_player;
                         msg_game_player.type = MSG_TYPE_GAME;
-                        msg_game_player.pid_joueur = joueur.pid_client;
+                        msg_game_player.pid_joueur = joueur_login.pid_client;
                         msg_game_player.type_msg = data;
 
                         msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
@@ -656,15 +719,15 @@ int main(int argc, char **argv){
                 //printf("CLIENT] Partie en cours ...\n");
                 pthread_mutex_lock(&MUT_NCURSES);
                     clear();
-                    
+                    getmaxyx(stdscr, rows, cols);
                     affichage_logo(2, 23);
                     
-                    mvprintw(8, 13, "Welcome ");
+                    mvprintw(8, ((cols-34)/2), "Welcome ");
                     attron(COLOR_PAIR(2));
-                    printw("%s", joueur.pseudo);
+                    printw("%s", joueur_login.pseudo);
                     attron(COLOR_PAIR(1));
                     printw(" to the game : Tetriis !!");
-                    mvprintw(7, 13, "Game in progress ..."); 
+                    mvprintw(7, ((cols-34)/2), "Game in progress ..."); 
                     mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
 
                     refresh();
@@ -888,6 +951,78 @@ int supprimer_lignes() {
     return ligne_effacees;
 }
 
+
+void maj_BAL_score() {
+
+    bool_t en_podium = FALSE;
+
+
+    score_t *info_score;
+
+    info_score = shmat(SHM_SCORE, NULL, 0); 
+
+    if (
+        info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client
+        || info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client
+        || info_score->troisieme.login_joueur.pid_client == joueur.login_joueur.pid_client
+    ) {
+        en_podium = TRUE;
+    }
+
+
+    if (info_score->premier.score < joueur.score) {
+        if (en_podium && info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            info_score->premier.score = joueur.score;
+        } else if (en_podium && info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            info_score->deuxieme = info_score->troisieme;
+            info_score->troisieme.score = 0;
+        } else if (en_podium) {
+            info_score->troisieme.score = 0;
+        } else {
+            info_score->troisieme =  info_score->deuxieme;
+            info_score->deuxieme = info_score->premier;
+            info_score->premier = joueur;
+        }
+        shmdt(info_score); 
+        return;
+        
+    } else if (info_score->deuxieme.score < joueur.score) {
+        if (en_podium && info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            info_score->premier = info_score->deuxieme;
+            info_score->deuxieme = info_score->troisieme;
+            info_score->troisieme.score = 0;
+        } else if (en_podium && info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            info_score->deuxieme.score = joueur.score;
+        } else if (en_podium) {
+            info_score->troisieme.score = 0;
+        } else {
+            info_score->troisieme =  info_score->deuxieme;
+            info_score->deuxieme = joueur;
+        }
+        shmdt(info_score); 
+        return;
+
+    } else if (info_score->troisieme.score < joueur.score) {
+        if (en_podium && info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            info_score->premier = info_score->deuxieme;
+            info_score->deuxieme = info_score->troisieme;
+            info_score->troisieme.score = 0;
+        } else if (en_podium && info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            info_score->deuxieme = info_score->troisieme;
+            info_score->troisieme.score = 0;
+        } else if (en_podium) {
+            info_score->troisieme.score = joueur.score;
+        } else {
+            info_score->troisieme = joueur;
+        }
+        shmdt(info_score); 
+        return;
+    }
+
+    shmdt(info_score); 
+}
+
+
 // ------------------------------------------------------------------------------------------------ //
 #pragma endregion
 
@@ -901,6 +1036,10 @@ void premier_render() {
     bordures_render();
 
     mvprintw(CONST_Y_OFF_GRILLE-1, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "Next :");
+
+    mvprintw(CONST_Y_OFF_GRILLE+5, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "Score :");
+
+    mvprintw(CONST_Y_OFF_GRILLE+8, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "Podium :");
 
 
     mvprintw(CONST_NB_LIGNES-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
@@ -968,6 +1107,8 @@ void render() {
     mvprintw(CONST_Y_OFF_GRILLE+2, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
     mvprintw(CONST_Y_OFF_GRILLE+3, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "    ");
     tetromino_render(idx_proch_tetr, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, CONST_Y_OFF_GRILLE, 0);
+
+    mvprintw(CONST_Y_OFF_GRILLE+6, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "%d", joueur.score);
 }
 
 
@@ -1027,7 +1168,7 @@ void * thread_partie(void * arg) {
 
                     msg_game_player_t msg_game_player;
                     msg_game_player.type = MSG_TYPE_GAME;
-                    msg_game_player.pid_joueur = joueur.pid_client;
+                    msg_game_player.pid_joueur = joueur_login.pid_client;
                     msg_game_player.type_msg = GAME_MSG_DEATH;
 
                     msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
@@ -1043,6 +1184,22 @@ void * thread_partie(void * arg) {
                     // reset pièce
                     x_tetr = CONST_LARGEUR_GRILLE / 2 - 2;
                     y_tetr = -4;
+
+                    // augmenter le score
+                    pthread_mutex_lock(&MUT_SCORE); 
+
+                    if (idx_tetr == 0 || idx_tetr == 1) {  // O ou I
+                        joueur.score += 5;
+                    } else if (idx_tetr == 2 || idx_tetr == 3 || idx_tetr == 5 || idx_tetr == 6) {  // S Z L ou J
+                        joueur.score += 10;
+                    } else {  // T
+                        joueur.score += 15;
+                    }
+                    sem_wait(SEM_SCORE); 
+                    maj_BAL_score();
+                    sem_post(SEM_SCORE); 
+                    
+                    pthread_mutex_unlock(&MUT_SCORE); 
 
                     idx_tetr = idx_proch_tetr;
                     idx_proch_tetr = generer_tetr();
@@ -1064,13 +1221,32 @@ void * thread_partie(void * arg) {
 
                 sup_consecutives += lignes_sup;
 
-                // TODO: augmenter le score
+                // augmenter le score
+                pthread_mutex_lock(&MUT_SCORE); 
+
+                if (sup_consecutives == 1) {
+                    joueur.score += 20;
+                }
+                else if (sup_consecutives == 2) {
+                    joueur.score += 50;
+                }
+                else if (sup_consecutives == 3) {
+                    joueur.score += 100;
+                }
+                else {  // 4 lignes ou +
+                    joueur.score += 300;
+                }
+                sem_wait(SEM_SCORE); 
+                maj_BAL_score();
+                sem_post(SEM_SCORE); 
+
+                pthread_mutex_unlock(&MUT_SCORE); 
             } else {
                 
                 if (sup_consecutives >= CONST_MIN_POUR_BONUS) {  // on vient d'arrêter de supprimer des lignes
                         msg_game_player_t msg_game_player;
                         msg_game_player.type = MSG_TYPE_GAME;
-                        msg_game_player.pid_joueur = joueur.pid_client;
+                        msg_game_player.pid_joueur = joueur_login.pid_client;
                         msg_game_player.type_msg = GAME_MSG_LINE;
 
                         msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
@@ -1110,7 +1286,7 @@ void * thread_recep(void * arg) {
 
         msg_game_server_t msg;
 
-        ssize_t res = msgrcv(BAL_ID, &msg, MSG_SIZEOF(msg_game_server_t), joueur.pid_client, IPC_NOWAIT);
+        ssize_t res = msgrcv(BAL_ID, &msg, MSG_SIZEOF(msg_game_server_t), joueur_login.pid_client, IPC_NOWAIT);
 
         if (res == -1) {
             // rien reçu ou erreur -> on ignore
@@ -1139,13 +1315,33 @@ void * thread_recep(void * arg) {
 
                     sup_consecutives += lignes_sup;
 
-                    // TODO: augmenter le score
+                    // augmenter le score
+                    pthread_mutex_lock(&MUT_SCORE); 
+
+                    if (sup_consecutives == 1) {
+                        joueur.score += 20;
+                    }
+                    else if (sup_consecutives == 2) {
+                        joueur.score += 50;
+                    }
+                    else if (sup_consecutives == 3) {
+                        joueur.score += 100;
+                    }
+                    else {  // 4 lignes ou +
+                        joueur.score += 300;
+                    }
+                    sem_wait(SEM_SCORE); 
+                    maj_BAL_score();
+                    sem_post(SEM_SCORE); 
+
+                    pthread_mutex_unlock(&MUT_SCORE); 
+                    
                 } else {
                     
                     if (sup_consecutives >= CONST_MIN_POUR_BONUS) {  // on vient d'arrêter de supprimer des lignes
                             msg_game_player_t msg_game_player;
                             msg_game_player.type = MSG_TYPE_GAME;
-                            msg_game_player.pid_joueur = joueur.pid_client;
+                            msg_game_player.pid_joueur = joueur_login.pid_client;
                             msg_game_player.type_msg = GAME_MSG_LINE;
 
                             msgsnd(BAL_ID, &msg_game_player, MSG_SIZEOF(msg_game_player_t), 0);  // envoie du message dans la BAL
@@ -1185,10 +1381,10 @@ void deroute(int signal){
 
 
             // déconnexion par rapport au serveur
-            joueur.fermer = TRUE;  // on veut quitter le serveur car le client se ferme
+            joueur_login.fermer = TRUE;  // on veut quitter le serveur car le client se ferme
             msg_login_t msg_login;
             msg_login.type = MSG_TYPE_LOGIN;
-            msg_login.msg = joueur;
+            msg_login.msg = joueur_login;
             
             msgsnd(BAL_ID, &msg_login, MSG_SIZEOF(msg_login_t), 0);  // envoi dans la BAL
             
