@@ -460,12 +460,64 @@ int main(){
                     sem_wait(SEM_SCORE); 
                 
                         info_score = shmat(SHM_SCORE, NULL, 0); 
-                        // 1re
-                        mvprintw(13 ,((cols-34)/2), "First player : %d by %s", info_score->premier.score, info_score->premier.login_joueur.pseudo); 
-                        // 2eme
-                        mvprintw(15 ,((cols-34)/2), "Second player : %d by %s", info_score->deuxieme.score, info_score->deuxieme.login_joueur.pseudo);
-                        // 3eme
-                        mvprintw(17 ,((cols-34)/2), "Third player : %d by %s", info_score->troisieme.score, info_score->troisieme.login_joueur.pseudo); 
+                            
+                             // 1re
+                            if (info_score->premier.score > 0){
+                                mvprintw(13 ,((cols-34)/2), "1st : "); 
+                                
+                                attron(COLOR_PAIR(6));
+                                attron(A_BOLD); 
+                                    printw("%d", info_score->premier.score);  // Score en vert
+                                attroff(A_BOLD);
+
+                                attron(COLOR_PAIR(1));
+                                    printw(" by "); 
+
+                                attron(COLOR_PAIR(3));
+                                attron(A_BOLD); 
+                                    printw("%s", info_score->premier.login_joueur.pseudo);  // Score en rouge
+                                attroff(A_BOLD);
+
+                                attron(COLOR_PAIR(1));
+                            }
+                            // 2eme
+                            if (info_score->deuxieme.score > 0){
+                                mvprintw(15 ,((cols-34)/2), "2nd : "); 
+                                
+                                attron(COLOR_PAIR(1));
+                                attron(A_BOLD); 
+                                    printw("%d", info_score->deuxieme.score);  // Score en vert
+                                attroff(A_BOLD); 
+
+                                attron(COLOR_PAIR(1));
+                                    printw(" by "); 
+
+                                attron(COLOR_PAIR(3));
+                                attron(A_BOLD); 
+                                    printw("%s", info_score->deuxieme.login_joueur.pseudo);  // Score en rouge
+                                attroff(A_BOLD); 
+
+                                attron(COLOR_PAIR(1));
+                            }
+                            // 3eme
+                            if (info_score->troisieme.score > 0){
+                                mvprintw(17 ,((cols-34)/2), "3rd : "); 
+                                
+                                attron(COLOR_PAIR(3));
+                                attron(A_BOLD); 
+                                    printw("%d", info_score->troisieme.score);  // Score en vert
+                                attroff(A_BOLD); 
+
+                                attron(COLOR_PAIR(1));
+                                    printw(" by "); 
+
+                                attron(COLOR_PAIR(3));
+                                attron(A_BOLD); 
+                                    printw("%s", info_score->troisieme.login_joueur.pseudo);  // Score en rouge
+                                attroff(A_BOLD); 
+
+                                attron(COLOR_PAIR(1));
+                            }
 
                         shmdt(info_score); 
                         
