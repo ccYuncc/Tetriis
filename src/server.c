@@ -54,6 +54,7 @@ event_t last_event;
 // VARIABLES GLOBALE
 bool close_ecoute = FALSE; 
 bool close_ecoute_parti = FALSE; 
+etat_serveur_t etat_serveur; 
 
 
 
@@ -83,6 +84,7 @@ int nb_ready_player(); //  CALCUL NOMBRE DE JOUEURS PRÊTS
 void deroute(); 
 void close_shm_sem();
 int check_end_game(); 
+
 
 
 
@@ -313,7 +315,8 @@ int main(){
             // --------------------------------------- ATTENTE --------------------------------------- //
 
             // MODIFICATION ETAT DU SERVEUR
-            changement_etat_serveur(ATTENTE);  
+            etat_serveur = ATTENTE; 
+            changement_etat_serveur(etat_serveur);  
 
 
             msg_ready_player_t tmp;
@@ -385,7 +388,8 @@ int main(){
         #pragma region CHANGEMENT ETAT SERVEUR = PARTIE
 
         // MODIFICATION ETAT DU SERVEUR
-        changement_etat_serveur(PARTIE); 
+        etat_serveur = PARTIE; 
+        changement_etat_serveur(etat_serveur); 
 
         #pragma endregion
 
@@ -423,136 +427,148 @@ int main(){
                 //  Affichage
                 getmaxyx(stdscr, rows, cols);
 
-                clear(); 
-                affichage_logo(2, ((cols-34)/2)); 
-                mvprintw(7, ((cols-34)/2), "Game in progress..."); 
 
-                pthread_mutex_lock(&MUT_LISTE_JOUEURS);
-                
-                    nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
+                // Verifier que la taille du terminal soit conforme pour une bonne image
 
-                pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+                if (rows < 25 || cols < 50){
+                    
+                    clear(); 
+
+                    mvprintw(0,0, "Terminal window is too small...");  // On ne sait pas la taille du terminal
+
+                    refresh(); 
+                }
+                else{   // TAILLE DU TERMINAL OK => AFFICHAGE DU JEU
+
+                    clear(); 
+                    affichage_logo(2, ((cols-34)/2)); 
+                    mvprintw(7, ((cols-34)/2), "Game in progress..."); 
+
+                    pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+                    
+                        nbJoueurs = joueurs_enregistre.nb_joueurs_en_partie; 
+
+                    pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
 
 
-                mvprintw(9, ((cols-34)/2), "Number of players alive : %d/%d", check_end_game(), nbJoueurs); 
+                    mvprintw(9, ((cols-34)/2), "Number of players alive : %d/%d", check_end_game(), nbJoueurs); 
 
-                fin = time(NULL); 
-                unsigned long secondes = (unsigned long) difftime( fin, debut ); 
+                    fin = time(NULL); 
+                    unsigned long secondes = (unsigned long) difftime( fin, debut ); 
 
-                if(secondes >= 60){
-                    int minutes = secondes / 60; 
-                    int reste = secondes % 60; 
+                    if(secondes >= 60){
+                        int minutes = secondes / 60; 
+                        int reste = secondes % 60; 
 
-                    if (reste > 0){
-                        mvprintw(11, ((cols-34)/2), "Time : %d min %d s", minutes, reste);
+                        if (reste > 0){
+                            mvprintw(11, ((cols-34)/2), "Time : %d min %d s", minutes, reste);
+                        }
+                        else{
+                            mvprintw(11, ((cols-34)/2), "Time : %d min", minutes);
+                        }
                     }
                     else{
-                        mvprintw(11, ((cols-34)/2), "Time : %d min", minutes);
-                    }
-                }
-                else{
-                    mvprintw(11, ((cols-34)/2), "Time : %lu sec", secondes);
-                } 
+                        mvprintw(11, ((cols-34)/2), "Time : %lu sec", secondes);
+                    } 
 
 
-                pthread_mutex_lock(&MUT_SCORE); 
-                        
-                    sem_wait(SEM_SCORE); 
-                
-                        info_score = shmat(SHM_SCORE, NULL, 0); 
+                    pthread_mutex_lock(&MUT_SCORE); 
                             
-                             // 1re
-                            if (info_score->premier.score > 0){
-                                mvprintw(13 ,((cols-34)/2), "1st : "); 
+                        sem_wait(SEM_SCORE); 
+                    
+                            info_score = shmat(SHM_SCORE, NULL, 0); 
                                 
-                                attron(COLOR_PAIR(6));
-                                attron(A_BOLD); 
-                                    printw("%d", info_score->premier.score);  // Score en vert
-                                attroff(A_BOLD);
+                                // 1re
+                                if (info_score->premier.score > 0){
+                                    mvprintw(13 ,((cols-34)/2), "1st : "); 
+                                    
+                                    attron(COLOR_PAIR(6));
+                                    attron(A_BOLD); 
+                                        printw("%d", info_score->premier.score);  // Score en vert
+                                    attroff(A_BOLD);
 
-                                attron(COLOR_PAIR(1));
-                                    printw(" by "); 
+                                    attron(COLOR_PAIR(1));
+                                        printw(" by "); 
 
-                                attron(COLOR_PAIR(3));
-                                attron(A_BOLD); 
-                                    printw("%s", info_score->premier.login_joueur.pseudo);  // Score en rouge
-                                attroff(A_BOLD);
+                                    attron(COLOR_PAIR(3));
+                                    attron(A_BOLD); 
+                                        printw("%s", info_score->premier.login_joueur.pseudo);  // Score en rouge
+                                    attroff(A_BOLD);
 
-                                attron(COLOR_PAIR(1));
-                            }
-                            // 2eme
-                            if (info_score->deuxieme.score > 0){
-                                mvprintw(15 ,((cols-34)/2), "2nd : "); 
-                                
-                                attron(COLOR_PAIR(1));
-                                attron(A_BOLD); 
-                                    printw("%d", info_score->deuxieme.score);  // Score en vert
-                                attroff(A_BOLD); 
+                                    attron(COLOR_PAIR(1));
+                                }
+                                // 2eme
+                                if (info_score->deuxieme.score > 0){
+                                    mvprintw(15 ,((cols-34)/2), "2nd : "); 
+                                    
+                                    attron(COLOR_PAIR(1));
+                                    attron(A_BOLD); 
+                                        printw("%d", info_score->deuxieme.score);  // Score en vert
+                                    attroff(A_BOLD); 
 
-                                attron(COLOR_PAIR(1));
-                                    printw(" by "); 
+                                    attron(COLOR_PAIR(1));
+                                        printw(" by "); 
 
-                                attron(COLOR_PAIR(3));
-                                attron(A_BOLD); 
-                                    printw("%s", info_score->deuxieme.login_joueur.pseudo);  // Score en rouge
-                                attroff(A_BOLD); 
+                                    attron(COLOR_PAIR(3));
+                                    attron(A_BOLD); 
+                                        printw("%s", info_score->deuxieme.login_joueur.pseudo);  // Score en rouge
+                                    attroff(A_BOLD); 
 
-                                attron(COLOR_PAIR(1));
-                            }
-                            // 3eme
-                            if (info_score->troisieme.score > 0){
-                                mvprintw(17 ,((cols-34)/2), "3rd : "); 
-                                
-                                attron(COLOR_PAIR(3));
-                                attron(A_BOLD); 
-                                    printw("%d", info_score->troisieme.score);  // Score en vert
-                                attroff(A_BOLD); 
+                                    attron(COLOR_PAIR(1));
+                                }
+                                // 3eme
+                                if (info_score->troisieme.score > 0){
+                                    mvprintw(17 ,((cols-34)/2), "3rd : "); 
+                                    
+                                    attron(COLOR_PAIR(3));
+                                    attron(A_BOLD); 
+                                        printw("%d", info_score->troisieme.score);  // Score en vert
+                                    attroff(A_BOLD); 
 
-                                attron(COLOR_PAIR(1));
-                                    printw(" by "); 
+                                    attron(COLOR_PAIR(1));
+                                        printw(" by "); 
 
-                                attron(COLOR_PAIR(3));
-                                attron(A_BOLD); 
-                                    printw("%s", info_score->troisieme.login_joueur.pseudo);  // Score en rouge
-                                attroff(A_BOLD); 
+                                    attron(COLOR_PAIR(3));
+                                    attron(A_BOLD); 
+                                        printw("%s", info_score->troisieme.login_joueur.pseudo);  // Score en rouge
+                                    attroff(A_BOLD); 
 
-                                attron(COLOR_PAIR(1));
-                            }
+                                    attron(COLOR_PAIR(1));
+                                }
 
-                        shmdt(info_score); 
-                        
-                    sem_post(SEM_SCORE); 
-
-                pthread_mutex_unlock(&MUT_SCORE); 
-
-                switch(last_event.event){
-
-                    case 1 :
-                        // 1 -> DERNIER EVENT : MORT d'UN JOUEUR
-
-                        attron(A_BOLD);
-                        attron(COLOR_PAIR(3));
-                        
-                        pthread_mutex_lock(&MUT_EVENT); 
+                            shmdt(info_score); 
                             
-                            mvprintw(19, ((cols-34)/2), "%s", last_event.pseudo); 
-                        
-                        pthread_mutex_unlock(&MUT_EVENT); 
-                        
-                        attron(COLOR_PAIR(1));
-                        attroff(A_BOLD);
-                        printw(" is dead...");
-                        
-                        refresh(); 
+                        sem_post(SEM_SCORE); 
 
-                        break; 
+                    pthread_mutex_unlock(&MUT_SCORE); 
 
-                    case 2 : 
-                        // 2 -> DERNIER EVENT : BONUS/MALUS D'UN JOUEUR
+                    switch(last_event.event){
 
-                        // AFFICHAGE MALUS
-                        // AFFICHAGE MORT SUR LE SERVEUR
-                        pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
+                        case 1 :
+                            // 1 -> DERNIER EVENT : MORT d'UN JOUEUR
+
+                            // AFFICHAGE MORT D'UN JOUEUR
+                            attron(A_BOLD);
+                            attron(COLOR_PAIR(3));
+                            
+                            pthread_mutex_lock(&MUT_EVENT); 
+                                
+                                mvprintw(20, ((cols-34)/2), "%s", last_event.pseudo); 
+                            
+                            pthread_mutex_unlock(&MUT_EVENT); 
+                            
+                            attron(COLOR_PAIR(1));
+                            attroff(A_BOLD);
+                            printw(" is dead...");
+                            
+                            refresh(); 
+
+                            break; 
+
+                        case 2 : 
+                            // 2 -> DERNIER EVENT : BONUS/MALUS D'UN JOUEUR
+
+                            // AFFICHAGE MALUS
 
                             attron(A_BOLD);
                             attron(COLOR_PAIR(2));
@@ -565,23 +581,47 @@ int main(){
                             
                             attron(COLOR_PAIR(1));
                             attroff(A_BOLD);
-                            printw(" gave everyone a lovely gift!");
+                            printw(" gave everyone a lovely gift !");
+                            
+                            refresh(); 
 
-                        pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+                            break; 
+
+                        case 3 : 
+
+                            // 3 -> DERNIER EVENT : DECONNEXION D'UN JOUEUR
+
+                            // AFFICHAGE DECONNEXIN 
+
+                            attron(A_BOLD);
+                            attron(COLOR_PAIR(2));
+                            
+                            pthread_mutex_lock(&MUT_EVENT); 
+                                
+                                mvprintw(20, ((cols-34)/2), "%s", last_event.pseudo); 
+                            
+                            pthread_mutex_unlock(&MUT_EVENT); 
+                            
+                            attron(COLOR_PAIR(1));
+                            attroff(A_BOLD);
+                            printw(" gave up the game !");
+                            
+                            refresh(); 
+
+
+                            break; 
+
+                        default : 
                         
-                        refresh(); 
+                            break; 
+                    }
 
-                        break; 
 
-                    default : 
-                    
-                        break; 
+                    mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
+                    refresh(); 
+    
                 }
 
-
-                mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
-                refresh(); 
- 
                 usleep(1000000); // 1s
 
             } while(check_end_game() != 1); 
@@ -658,10 +698,11 @@ int main(){
             
             
             // MODIFICATION ETAT DU SERVEUR
-            changement_etat_serveur(PODIUM);  
+            etat_serveur = PODIUM; 
+            changement_etat_serveur(etat_serveur);  
             clear(); 
 
-
+            
 
             // SIGNAL DE FIN DE PARTIE
             pthread_mutex_lock(&MUT_LISTE_JOUEURS); 
@@ -782,6 +823,36 @@ int main(){
                         }
 
                     pthread_mutex_unlock(&MUT_LISTE_JOUEURS);
+
+                
+                    if (etat_serveur == PARTIE){ // Dans le cas où le joueur qui durant une partie
+                        
+                        
+                        if (index != -1){
+
+                            pthread_mutex_lock(&MUT_JOUEURS_VIVANTS); 
+
+                                joueurs_vivants[index] == FALSE; 
+
+                            pthread_mutex_unlock(&MUT_JOUEURS_VIVANTS); 
+                        
+                            pthread_mutex_lock(&MUT_LISTE_JOUEURS);
+
+                                joueurs_enregistre.nb_joueurs_en_partie--; 
+
+                            pthread_mutex_unlock(&MUT_LISTE_JOUEURS); 
+
+                            pthread_mutex_lock(&MUT_EVENT); 
+
+                                last_event.event = 3; 
+                                strcpy(last_event.pseudo, pseudo);
+
+                            pthread_mutex_unlock(&MUT_EVENT); 
+                        
+                        }
+
+
+                    }
 
                     break; 
 
@@ -1118,6 +1189,7 @@ int main(){
         int nbJoueurs = 0; 
         int index_joueurs;
         int rows, cols; 
+        char pseudo[CONST_LONGUEUR_PSEUDO]; 
         
         getmaxyx(stdscr, rows, cols); 
 
@@ -1171,8 +1243,14 @@ int main(){
                         }else{
                             attron(COLOR_PAIR(3)); //  Joueur pas prêt ROUGE
                         }
+                        strcpy(pseudo, joueurs_enregistre.liste_joueurs[i].pseudo); 
+                        mvprintw(15+(i/3), ((cols/6)+((i%3)*(CONST_LONGUEUR_PSEUDO + 10))) + (CONST_LONGUEUR_PSEUDO - strlen(pseudo))/2, "<"); 
+                        
+                        attron(A_BOLD); 
+                        printw("  %s  ", pseudo); 
+                        attroff(A_BOLD); 
 
-                        mvprintw(15+(i/3), (cols/6)+((i%3)*CONST_LONGUEUR_PSEUDO), "<  %s  >", joueurs_enregistre.liste_joueurs[i].pseudo); 
+                        printw(">");
 
                         attron(COLOR_PAIR(1));
                     }
@@ -1182,6 +1260,10 @@ int main(){
         }
 
         // Message BOTTOM
+        attron(COLOR_PAIR(3)); 
+        mvprintw(rows-2, 0, "Make sure your terminal is at the correct size");
+        attron(COLOR_PAIR(1));  
+
         mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas");
         
         char touche = getch();  // récupération de l'input

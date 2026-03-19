@@ -98,6 +98,10 @@ void affichage_compteur(int compteur, int points) {
     for (int i=0; i<points; i++) {
         printw(".");
     }
+    attron(COLOR_PAIR(3)); 
+
+    mvprintw(rows-1, 0, "Make sure your terminal is at the correct size"); 
+
     attron(COLOR_PAIR(1));
     refresh();
 }
