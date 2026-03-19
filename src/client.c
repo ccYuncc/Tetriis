@@ -390,12 +390,6 @@ int main(int argc, char **argv){
 
                 pthread_mutex_unlock(&MUT_THREAD_PATIE);
 
-                sem_wait(SEM_SCORE); 
-                                    
-                    maj_BAL_score();
-
-                sem_post(SEM_SCORE);
-
                 _premiere_exec = FALSE;
             }
 
@@ -972,51 +966,191 @@ void maj_BAL_score() {
 
     if (info_score->premier.score < joueur.score) {
         if (en_podium && info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            /*
+            1: moi
+            2: 2ème
+            3: 3ème
+
+            devient 
+
+            1: moi
+            2: 2ème
+            3: 3ème
+            */
             info_score->premier.score = joueur.score;
         } else if (en_podium && info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
-            info_score->deuxieme = info_score->troisieme;
-            info_score->troisieme.score = 0;
-        } else if (en_podium) {
-            info_score->troisieme.score = 0;
-        } else {
-            info_score->troisieme =  info_score->deuxieme;
-            info_score->deuxieme = info_score->premier;
-            info_score->premier = joueur;
-        }
-        shmdt(info_score); 
-        return;
-        
-    } else if (info_score->deuxieme.score < joueur.score) {
-        if (en_podium && info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) {
-            info_score->premier = info_score->deuxieme;
-            info_score->deuxieme = info_score->troisieme;
-            info_score->troisieme.score = 0;
-        } else if (en_podium && info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
-            info_score->deuxieme.score = joueur.score;
-        } else if (en_podium) {
-            info_score->troisieme.score = 0;
-        } else {
-            info_score->troisieme =  info_score->deuxieme;
-            info_score->deuxieme = joueur;
-        }
-        shmdt(info_score); 
-        return;
+            /*
+            1: 1er
+            2: moi
+            3: 3ème
 
-    } else if (info_score->troisieme.score < joueur.score) {
-        if (en_podium && info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) {
-            info_score->premier = info_score->deuxieme;
-            info_score->deuxieme = info_score->troisieme;
-            info_score->troisieme.score = 0;
-        } else if (en_podium && info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
-            info_score->deuxieme = info_score->troisieme;
-            info_score->troisieme.score = 0;
-        } else if (en_podium) {
+            devient 
+
+            1: moi
+            2: 1er
+            3: 3ème
+            */
+
+            // 1er -> 2ème
+            info_score->deuxieme.score = info_score->premier.score;
+            info_score->deuxieme.login_joueur.pid_client = info_score->premier.login_joueur.pid_client;
+            strcpy(info_score->deuxieme.login_joueur.pseudo, info_score->premier.login_joueur.pseudo);
+
+            // moi -> 1er
+            info_score->premier.score = joueur.score;
+            info_score->premier.login_joueur.pid_client = joueur.login_joueur.pid_client;
+            strcpy(info_score->premier.login_joueur.pseudo, joueur.login_joueur.pseudo);
+
+
+        } else if (en_podium && info_score->troisieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            /*
+            1: 1er
+            2: 2ème
+            3: moi
+
+            devient 
+
+            1: moi
+            2: 1er
+            3: 2ème
+            */
+
+            // 2ème -> 3ème
+            info_score->troisieme.score = info_score->deuxieme.score;
+            info_score->troisieme.login_joueur.pid_client = info_score->deuxieme.login_joueur.pid_client;
+            strcpy(info_score->troisieme.login_joueur.pseudo, info_score->deuxieme.login_joueur.pseudo);
+            // 1er -> 2ème
+            info_score->deuxieme.score = info_score->premier.score;
+            info_score->deuxieme.login_joueur.pid_client = info_score->premier.login_joueur.pid_client;
+            strcpy(info_score->deuxieme.login_joueur.pseudo, info_score->premier.login_joueur.pseudo);
+            // moi -> 1er
+            info_score->premier.score = joueur.score;
+            info_score->premier.login_joueur.pid_client = joueur.login_joueur.pid_client;
+            strcpy(info_score->premier.login_joueur.pseudo, joueur.login_joueur.pseudo);
+        } else {
+            /*
+            1: 1er
+            2: 2ème
+            3: 3ème
+
+            devient 
+
+            1: moi
+            2: 1er
+            3: 2ème
+            */
+
+            // 2ème -> 3ème
+            info_score->troisieme.score = info_score->deuxieme.score;
+            info_score->troisieme.login_joueur.pid_client = info_score->deuxieme.login_joueur.pid_client;
+            strcpy(info_score->troisieme.login_joueur.pseudo, info_score->deuxieme.login_joueur.pseudo);
+            // 1er -> 2ème
+            info_score->deuxieme.score = info_score->premier.score;
+            info_score->deuxieme.login_joueur.pid_client = info_score->premier.login_joueur.pid_client;
+            strcpy(info_score->deuxieme.login_joueur.pseudo, info_score->premier.login_joueur.pseudo);
+            // moi -> 1er
+            info_score->premier.score = joueur.score;
+            info_score->premier.login_joueur.pid_client = joueur.login_joueur.pid_client;
+            strcpy(info_score->premier.login_joueur.pseudo, joueur.login_joueur.pseudo);
+        }
+        
+    } else if (info_score->deuxieme.score < joueur.score
+                && !(info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) ) {
+
+        if (en_podium && info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            /*
+            1: 1er
+            2: moi
+            3: 3ème
+
+            devient 
+
+            1: 1er
+            2: moi
+            3: 3ème
+            */
+            info_score->deuxieme.score = joueur.score;
+        } else if (en_podium && info_score->troisieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            /*
+            1: 1er
+            2: 2ème
+            3: moi
+
+            devient 
+
+            1: 1er
+            2: moi
+            3: 2ème
+            */
+
+            // 2ème -> 3ème
+            info_score->troisieme.score = info_score->deuxieme.score;
+            info_score->troisieme.login_joueur.pid_client = info_score->deuxieme.login_joueur.pid_client;
+            strcpy(info_score->troisieme.login_joueur.pseudo, info_score->deuxieme.login_joueur.pseudo);
+            // moi -> 2ème
+            info_score->deuxieme.score = joueur.score;
+            info_score->deuxieme.login_joueur.pid_client = joueur.login_joueur.pid_client;
+            strcpy(info_score->deuxieme.login_joueur.pseudo, joueur.login_joueur.pseudo);
+        } else {
+            /*
+            1: 1er
+            2: 2ème
+            3: 3ème
+
+            devient 
+
+            1: 1er
+            2: moi
+            3: 2ème
+            */
+
+            // 2ème -> 3ème
+            info_score->troisieme.score = info_score->deuxieme.score;
+            info_score->troisieme.login_joueur.pid_client = info_score->deuxieme.login_joueur.pid_client;
+            strcpy(info_score->troisieme.login_joueur.pseudo, info_score->deuxieme.login_joueur.pseudo);
+            // moi -> 2ème
+            info_score->deuxieme.score = joueur.score;
+            info_score->deuxieme.login_joueur.pid_client = joueur.login_joueur.pid_client;
+            strcpy(info_score->deuxieme.login_joueur.pseudo, joueur.login_joueur.pseudo);
+        }
+
+    } else if (info_score->troisieme.score < joueur.score
+                && !(info_score->premier.login_joueur.pid_client == joueur.login_joueur.pid_client) 
+                && !(info_score->deuxieme.login_joueur.pid_client == joueur.login_joueur.pid_client) ) {
+
+        if (en_podium && info_score->troisieme.login_joueur.pid_client == joueur.login_joueur.pid_client) {
+            /*
+            1: 1er
+            2: 2ème
+            3: moi
+
+            devient 
+
+            1: 1er
+            2: 2ème
+            3: moi
+            */
             info_score->troisieme.score = joueur.score;
         } else {
-            info_score->troisieme = joueur;
+            /*
+            1: 1er
+            2: 2ème
+            3: 3ème
+
+            devient 
+
+            1: 1er
+            2: 2ème
+            3: moi
+            */
+
+            // moi -> 3ème
+            info_score->troisieme.score = joueur.score;
+            info_score->troisieme.login_joueur.pid_client = joueur.login_joueur.pid_client;
+            strcpy(info_score->troisieme.login_joueur.pseudo, joueur.login_joueur.pseudo);
         }
-        shmdt(info_score); 
-        return;
+
+
     }
 
     shmdt(info_score); 

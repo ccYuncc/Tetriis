@@ -153,12 +153,12 @@ void affichage_podium(score_t * info_score){
     mvprintw((rows/2)+4, (cols/6)+11, "%s", info_score->last_survivors[2]); 
 
     mvprintw((rows/2)+3, (4*cols/6)-9, "%s", info_score->deuxieme.login_joueur.pseudo); 
-    mvprintw((rows/2)+1, (4*cols/6)+1, "%s", info_score->deuxieme.login_joueur.pseudo); 
-    mvprintw((rows/2)+4, (4*cols/6)+11, "%s", info_score->deuxieme.login_joueur.pseudo); 
+    mvprintw((rows/2)+1, (4*cols/6)+1, "%s", info_score->premier.login_joueur.pseudo); 
+    mvprintw((rows/2)+4, (4*cols/6)+11, "%s", info_score->troisieme.login_joueur.pseudo); 
 
     mvprintw((rows/2)+2, (4*cols/6)-9, "(%d)", info_score->deuxieme.score); 
-    mvprintw((rows/2), (4*cols/6)+1, "(%d)", info_score->deuxieme.score); 
-    mvprintw((rows/2)+3, (4*cols/6)+11, "(%d)", info_score->deuxieme.score); 
+    mvprintw((rows/2), (4*cols/6)+1, "(%d)", info_score->premier.score); 
+    mvprintw((rows/2)+3, (4*cols/6)+11, "(%d)", info_score->troisieme.score); 
 
     mvprintw(rows-1, 0, "Tetriis was made by GREBERT Cloe and DUTHOIT Thomas"); 
     refresh(); 
