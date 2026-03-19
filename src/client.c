@@ -116,7 +116,7 @@ int main(int argc, char **argv){
     
     // TEST ERREUR DE CREATION
     if (SEM_INFO_SERVEUR == SEM_FAILED || SEM_SCORE == SEM_FAILED  ) {
-        printf("Il faut lancer le serveur avant de lancer un client !\n");
+        printf("You need to start the server before starting a client !\n");
         exit(EXIT_FAILURE);
     }
 
