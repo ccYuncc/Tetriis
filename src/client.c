@@ -171,7 +171,7 @@ int main(int argc, char **argv){
     maj_info_serveur();
 
     pthread_mutex_lock(&MUT_INFO_SERVEUR);
-    printf("CLIENT] PID du serveur : %d\n", serveur.pid_serveur);
+    printf("CLIENT] Server PID : %d\n", serveur.pid_serveur);
     pthread_mutex_unlock(&MUT_INFO_SERVEUR);
 
     // -------------------------------------------------------------------------------------------------------- //
