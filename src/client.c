@@ -1249,13 +1249,13 @@ void render() {
 
     info_score = shmat(SHM_SCORE, NULL, 0); 
     if (info_score->premier.score > 0) {
-        mvprintw(CONST_Y_OFF_GRILLE+9, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "1st: %s (%d)", info_score->premier.login_joueur.pseudo, info_score->premier.score);
+        mvprintw(CONST_Y_OFF_GRILLE+9, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "1st: %s (%d)            ", info_score->premier.login_joueur.pseudo, info_score->premier.score);
     }
     if (info_score->deuxieme.score > 0) {
-        mvprintw(CONST_Y_OFF_GRILLE+10, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "2nd: %s (%d)", info_score->deuxieme.login_joueur.pseudo, info_score->deuxieme.score);
+        mvprintw(CONST_Y_OFF_GRILLE+10, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "2nd: %s (%d)            ", info_score->deuxieme.login_joueur.pseudo, info_score->deuxieme.score);
     }
     if (info_score->troisieme.score > 0) {
-        mvprintw(CONST_Y_OFF_GRILLE+11, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "3rd: %s (%d)", info_score->troisieme.login_joueur.pseudo, info_score->troisieme.score);
+        mvprintw(CONST_Y_OFF_GRILLE+11, CONST_X_OFF_GRILLE + CONST_LARGEUR_GRILLE + 5, "3rd: %s (%d)            ", info_score->troisieme.login_joueur.pseudo, info_score->troisieme.score);
     }
 
     shmdt(info_score);
