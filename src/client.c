@@ -1259,6 +1259,23 @@ void render() {
     }
 
     shmdt(info_score);
+
+
+
+
+
+    int rows, cols;
+
+    getmaxyx(stdscr, rows, cols);
+
+    if (rows < CONST_NB_LIGNES || cols < CONST_NB_COLONNES) {
+        attron(COLOR_PAIR(3));
+        mvprintw(0, 0, "TERMINAL WINDOW IS TO SMALL !");
+        attron(COLOR_PAIR(1));
+    } else {
+        mvprintw(0, 0, "                             ");  // effacer le message
+        tetromino_render(idx_tetr, x_tetr + CONST_X_OFF_GRILLE, y_tetr + CONST_Y_OFF_GRILLE, rot_tetr); // redessiner la pièce actuelle si elle s'est faite effacer par la ligne d'au dessus
+    }
 }
 
 
