@@ -125,7 +125,7 @@ void affichage_podium(score_t * info_score){
 
     clear(); 
     affichage_logo(2, ((cols-34)/2)); 
-    mvprintw(7, ((cols-34)/2), "We hope you enjoy the game"); 
+    mvprintw(7, ((cols-34)/2), "We hope you enjoyed the game"); 
 
     attron(A_BOLD);
     mvprintw((rows/2)-3, ((cols-7)/2), "Results");
