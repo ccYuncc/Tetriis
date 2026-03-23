@@ -41,7 +41,7 @@ Pour installer Tetriis, vous pouvez télecharger l'archive de code directement o
 ```sh
 git clone https://github.com/ccYuncc/Tetriis.git
 ```
-Une fois daans le répertoire du projet, la compilation de Tetriis se fait grâce à Makefile:
+Une fois dans le répertoire du projet, la compilation de Tetriis se fait grâce à Makefile:
 ```sh
 make
 ```
@@ -53,12 +53,12 @@ La création des dossiers et fichiers pour l'utilisation de Tetriis est automati
 
 # MODE D'EMPLOI
 
-> ATTENTION : Comme le projet repose sur le système de ficheir Linux et que le projet détecte automatiquement les chemins en fonction de l'utilisateur qui lance le programme, il est **impératif** de lancer tous les exécutables avec **le même utilisateur**.
+> ATTENTION : Comme le projet repose sur le système de fichier Linux et que le projet détecte automatiquement les chemins en fonction de l'utilisateur qui lance le programme, il est **impératif** de lancer tous les exécutables avec **le même utilisateur**.
 
 ## 1. Le serveur
 
 Le serveur est le premier exécutable à lancer pour jouer à Tetriis.
-A partir du répertoire du projet, le serveur est lançable grâce à l'éxécutable situé dans `bin/server.exe`, et ce depuis n'importe quel répertoire de votre machine. Une fois lancé, il va foncionner de manière totalement autonome, et il est arrêtable de deux manières:
+A partir du répertoire du projet, le serveur est lançable grâce à l'éxécutable situé dans `bin/server.exe`. Cet exécutable peut être lancé peu importe le répertoire courant. Une fois lancé, il va fonctionner de manière totalement autonome, et il est arrêtable de deux manières:
 - Touche `[ECHAP]`en mode attente
 - `[Ctrl+C]` à n'importe quel moment
 
@@ -66,7 +66,7 @@ La fermeture du serveur entraîne la fermeture de tous les clients qui y étaien
 
 ## 2. Le client
 
-A partir du répertoire du projet, le client est lançable grâce à l'éxécutable situé dans `bin/client.exe`, et ce depuis n'importe quel répertoire de votre machine. Un pseudo peut être directement renseigné en argument de ligne de commande (`./bin/client.exe monPseudo`), sinon il vous sera demandé de le rentrer avant la connexion (Un pseudo a une longueur max de 10 caractères).
+A partir du répertoire du projet, le client est lançable grâce à l'éxécutable situé dans `bin/client.exe`. Cet exécutable peut être lancé peu importe le répertoire courant. Un pseudo peut être directement renseigné en argument de ligne de commande (`./bin/client.exe monPseudo`), sinon il vous sera demandé de le rentrer avant la connexion (Un pseudo a une longueur max de 10 caractères).
 
 Une fois le pseudo rentré et la connexion effectuéee, voici les contrôles selont la vue affichée:
 - Peu importe la vue:
@@ -75,7 +75,7 @@ Une fois le pseudo rentré et la connexion effectuéee, voici les contrôles sel
   - `[ENTRER]`pour passer prêt/non prêt
 - Mode partie:
   - `[A]`pour déplacer la pièce vers la gauche
-  - `[D]`pour déplacer la pièce vers la droite
+  - `[E]`pour déplacer la pièce vers la droite
   - `[Z]`pour tourner la pièce
   - `[S]`pour faire tomber la pièce plus vite
 
