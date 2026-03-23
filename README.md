@@ -26,7 +26,6 @@
     - [Diagramme d'activité du serveur](#2-diagramme-dactivité-du-serveur)
     - [Diagramme d'état du client](#3-diagramme-détat-du-client)
     - [Diagramme d'état du serveur](#4-diagramme-détat-du-serveur)
-    - [Diagramme de séquence pour la connexion d'un client au serveur](#5-diagramme-de-séquence-pour-la-connexion-dun-client-au-serveur)
   - [**III.2 Mockups des vues de l'application**](#iv2-mockups-des-vues-de-lapplication)
     - [1. Salle d'attente](#1-salle-dattente)
     - [2. Attente d'une fin de partie](#2-attente-dune-fin-de-partie)
