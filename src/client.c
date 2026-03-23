@@ -189,20 +189,23 @@ int main(int argc, char **argv){
             strncpy(joueur_login.pseudo, argv[1], CONST_LONGUEUR_PSEUDO);
 
         } else {  // lancé avec ./bin/client.exe
+            char buff_pseudo_temp[CONST_LONGUEUR_PSEUDO+1];
             printf("CLIENT] Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
-            fgets(joueur_login.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
-            joueur_login.pseudo[strlen(joueur_login.pseudo)-1] = '\0';
+            fgets(buff_pseudo_temp, CONST_LONGUEUR_PSEUDO+1, stdin);
+            buff_pseudo_temp[strlen(joueur_login.pseudo)-1] = '\0';
+            strncpy(joueur_login.pseudo, buff_pseudo_temp, CONST_LONGUEUR_PSEUDO);
 
             while (strcmp(joueur_login.pseudo, "") == 0) {
-                printf("CLIENT] Veuillez rentrer un pseudo... Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
-                fgets(joueur_login.pseudo, CONST_LONGUEUR_PSEUDO, stdin);
-                joueur_login.pseudo[strlen(joueur_login.pseudo)-1] = '\0';
+                printf("CLIENT] Please enter your pseudo... Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
+                fgets(buff_pseudo_temp, CONST_LONGUEUR_PSEUDO+1, stdin);
+                buff_pseudo_temp[strlen(joueur_login.pseudo)-1] = '\0';
+                strncpy(joueur_login.pseudo, buff_pseudo_temp, CONST_LONGUEUR_PSEUDO);
             }
         }
 
         // ACQUISITION DU PID
         joueur_login.pid_client = getpid();
-        printf("CLIENT] PID du client : %d\n", joueur_login.pid_client);
+        printf("CLIENT] client's PID : %d\n", joueur_login.pid_client);
 
         msg_login_t msg_login;
         msg_login.type = MSG_TYPE_LOGIN;
@@ -215,15 +218,15 @@ int main(int argc, char **argv){
 
         msgrcv(BAL_ID, &msg_reponse, MSG_SIZEOF(msg_reponse_serveur_t), joueur_login.pid_client, 0);
 
-        printf("CLIENT] Réponse du serveur : \"%s\"\n", msg_reponse.msg);
+        printf("CLIENT] Server anwser : \"%s\"\n", msg_reponse.msg);
 
         if (! strcmp(msg_reponse.msg, CONST_LOGIN_OK)) {
 
-            printf("CLIENT] Login réussi !\n");
+            printf("CLIENT] Login sucessful !\n");
 
         } 
         else if (! strcmp(msg_reponse.msg, CONST_LOGIN_ECHEC)) {
-            printf("CLIENT] ERREUR : Login échoué !\n");
+            printf("CLIENT] ERROR : Login failed !\n");
             
             sem_close(SEM_INFO_SERVEUR);
             sem_close(SEM_SCORE);
@@ -231,7 +234,7 @@ int main(int argc, char **argv){
             return EXIT_FAILURE;
         } 
         else {
-            printf("CLIENT] ERREUR : Réponse inconnue !\n");
+            printf("CLIENT] ERREUR : unknown anwser !\n");
             
             sem_close(SEM_INFO_SERVEUR);
             sem_close(SEM_SCORE);
