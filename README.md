@@ -146,8 +146,6 @@ Tout d'abord, les diagrammes UML nous ont permis de planifier la logique de l'ap
 ![Diagramme séquence connexion](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/diagrammeetatclient.puml)
 ### 4. Diagramme d'état du serveur
 ![Diagramme séquence connexion](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/diagrammeetatserveur.puml)
-### 5. Diagramme de séquence pour la connexion d'un client au serveur
-![Diagramme séquence connexion](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ccYuncc/Tetriis/refs/heads/main/UML/connexion.puml)
 
 ## IV.2 Mockups des vues de l'application
 Malgré la contrainte d'une application avec un rendu en mode texte uniquement, nous avons réalisés quelques designs pour les différentes vues qui composent notre application, notamment pour le client, cela nous a permi d'avoir une base solide sur laquelle se baser lors de la phase de production.
