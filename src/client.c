@@ -192,13 +192,19 @@ int main(int argc, char **argv){
             char buff_pseudo_temp[CONST_LONGUEUR_PSEUDO+1];
             printf("CLIENT] Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
             fgets(buff_pseudo_temp, CONST_LONGUEUR_PSEUDO+1, stdin);
-            buff_pseudo_temp[strlen(joueur_login.pseudo)-1] = '\0';
+            int len = strlen(buff_pseudo_temp);
+            if (len > 0 && buff_pseudo_temp[len - 1] == '\n') {
+                buff_pseudo_temp[len - 1] = '\0';
+            }
             strncpy(joueur_login.pseudo, buff_pseudo_temp, CONST_LONGUEUR_PSEUDO);
 
             while (strcmp(joueur_login.pseudo, "") == 0) {
                 printf("CLIENT] Please enter your pseudo... Pseudo (%d char. max) : ", CONST_LONGUEUR_PSEUDO);
                 fgets(buff_pseudo_temp, CONST_LONGUEUR_PSEUDO+1, stdin);
-                buff_pseudo_temp[strlen(joueur_login.pseudo)-1] = '\0';
+                int len = strlen(buff_pseudo_temp);
+                if (len > 0 && buff_pseudo_temp[len - 1] == '\n') {
+                    buff_pseudo_temp[len - 1] = '\0';
+                }
                 strncpy(joueur_login.pseudo, buff_pseudo_temp, CONST_LONGUEUR_PSEUDO);
             }
         }
