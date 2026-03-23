@@ -346,7 +346,7 @@ int main(){
             while(!ready_player_start()){
                 // ncurses ne fonctionne pas avec les threads 
                 affichage_attente(); 
-                usleep(100000); // 100 ms
+                usleep(200000); // 100 ms
             }
 
 
