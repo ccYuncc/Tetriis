@@ -126,7 +126,8 @@ Tetriis se distingue du jeu original en ajoutant des spécificités tel que des 
 ## PRINCIPES DE JEU
 - <ins>**But général :**</ins> Le but du jeu est de former des lignes complètes de blocs en empilant des pièces qui tombent du haut de l'écran, à chaque fois qu'une ligne complète est faite, elle est supprimée, et toutes les pièces présentes au dessus descendent d'un bloc.
 - <ins>**Bonus/Malus :**</ins> 
-    - Malus : Le Malus (qui peut être vu comme un bonus pour le joueur qui le génère) ajoute une ligne supplémentaire chez les autres joueurs quand joueur supprime au moins 2 lignes d'un coup.
+    - Malus : Le Malus ajoute une ligne supplémentaire chez les autres joueurs quand joueur supprime au moins 2 lignes d'un coup.
+    - Bonus : Le Malus  permet au joueur avec le plus de points d'être immunisé aux malus.
 - <ins>**Fin de partie :**</ins> Une partie se finit quand il ne reste plus qu'un joueur en lice.
 - <ins>**Défaite :**</ins> Un joueur perd la partie s'il ne peut plus faire descendre de pièce dans la zone de jeu
 - <ins>**Victoire :**</ins> Un joueur peut gagner la partie de 2 manières différentes: il est le dernier en lice dans la partie (survivant)  ou il a le plus grand score à la fin de la partie (Highest Scorer). Il peut donc y avoir 2 joueurs gagnant maximum dans une partie.
